@@ -65,6 +65,13 @@ public class KnowledgeProperties {
      */
     private String userDatasetPrefix = "user_";
 
+    /**
+     * Classpath location of the RSA public key PEM file used to encrypt HTTP_USER_INFO
+     * for SSO login. Default: rsa_public_key.pem (bundled with SDK).
+     * To use a custom key, place your PEM file on the classpath and set this property.
+     */
+    private String rsaPublicKeyPath = "rsa_public_key.pem";
+
     public String getBaseUrl() {
         return baseUrl;
     }
@@ -159,5 +166,13 @@ public class KnowledgeProperties {
 
     public void setUserDatasetPrefix(String userDatasetPrefix) {
         this.userDatasetPrefix = userDatasetPrefix;
+    }
+
+    public String getRsaPublicKeyPath() {
+        return rsaPublicKeyPath;
+    }
+
+    public void setRsaPublicKeyPath(String rsaPublicKeyPath) {
+        this.rsaPublicKeyPath = rsaPublicKeyPath;
     }
 }

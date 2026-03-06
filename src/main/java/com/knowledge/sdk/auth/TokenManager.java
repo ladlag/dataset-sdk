@@ -223,9 +223,10 @@ public class TokenManager {
     }
 
     private PublicKey loadPublicKey() throws Exception {
-        InputStream is = getClass().getClassLoader().getResourceAsStream("rsa_public_key.pem");
+        String keyPath = properties.getRsaPublicKeyPath();
+        InputStream is = getClass().getClassLoader().getResourceAsStream(keyPath);
         if (is == null) {
-            throw new KnowledgeException("RSA public key file not found in classpath");
+            throw new KnowledgeException("RSA public key file not found in classpath: " + keyPath);
         }
 
         StringBuilder sb = new StringBuilder();

@@ -51,6 +51,7 @@ knowledge:
   max-files-per-batch: 10
   public-dataset-name: public_dataset
   user-dataset-prefix: user_
+  rsa-public-key-path: rsa_public_key.pem  # RSA 公钥文件路径（classpath 下）
 ```
 
 > **说明**：`username` 和 `email` 用于 SSO 登录，SDK 会将其构建为 `{"username":"...","email":"..."}` JSON 格式，经 RSA 加密后作为 `HTTP_USER_INFO` 发送。
@@ -69,6 +70,34 @@ public class YourBusinessService {
 ```
 
 > **注意**：SDK 所有 Bean 使用 `knowledgeSdk` 前缀命名（如 `knowledgeSdkOkHttpClient`、`knowledgeSdkTokenManager`），不会与主项目的 Bean 命名冲突。
+
+### 4. RSA 公钥（PEM 文件）说明
+
+SDK 在 SSO 登录时需要对用户信息进行 RSA 加密。加密流程如下：
+
+1. SDK 将 `username` 和 `email` 构建为 JSON：`{"username":"alice","email":"alice@example.com"}`
+2. 使用 RSA 公钥对该 JSON 字符串进行加密
+3. 将加密结果 Base64 编码后作为 `HTTP_USER_INFO` 字段发送到 SSO 登录接口
+
+**PEM 文件位置**：SDK 内置了默认的 RSA 公钥文件 `src/main/resources/rsa_public_key.pem`，打包后位于 classpath 根路径下。
+
+**使用自定义公钥**：如果你的知识库系统使用不同的 RSA 密钥对，可以通过以下步骤替换：
+
+1. 将你的 RSA 公钥 PEM 文件放到项目的 `src/main/resources/` 目录下（如 `my_rsa_key.pem`）
+2. 在 `application.yml` 中配置：
+   ```yaml
+   knowledge:
+     rsa-public-key-path: my_rsa_key.pem
+   ```
+
+PEM 文件格式示例：
+```
+-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC...（Base64 编码的公钥）
+-----END PUBLIC KEY-----
+```
+
+> **注意**：PEM 文件必须是 X.509 格式的 RSA 公钥（`-----BEGIN PUBLIC KEY-----`），SDK 会自动忽略头尾标记行，解码中间的 Base64 内容。
 
 ---
 

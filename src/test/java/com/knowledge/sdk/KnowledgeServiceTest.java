@@ -309,6 +309,18 @@ class KnowledgeServiceTest {
         assertEquals("testuser@example.com", properties.getEmail());
     }
 
+    @Test
+    void testRsaPublicKeyPathDefault() {
+        assertEquals("rsa_public_key.pem", properties.getRsaPublicKeyPath());
+    }
+
+    @Test
+    void testRsaPublicKeyPathConfigurable() {
+        KnowledgeProperties customProperties = new KnowledgeProperties();
+        customProperties.setRsaPublicKeyPath("custom_rsa_key.pem");
+        assertEquals("custom_rsa_key.pem", customProperties.getRsaPublicKeyPath());
+    }
+
     /**
      * Simple mock TokenManager that returns a static token for testing,
      * without actually making SSO login calls.
