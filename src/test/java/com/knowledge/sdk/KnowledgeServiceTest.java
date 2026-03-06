@@ -6,7 +6,7 @@ import com.knowledge.sdk.client.KnowledgeHttpClient;
 import com.knowledge.sdk.config.KnowledgeProperties;
 import com.knowledge.sdk.exception.KnowledgeException;
 import com.knowledge.sdk.model.DatasetResponse;
-import com.knowledge.sdk.service.KnowledgeService;
+import com.knowledge.sdk.service.KnowledgeDatasetService;
 import okhttp3.OkHttpClient;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class KnowledgeServiceTest {
 
     private MockWebServer mockServer;
-    private KnowledgeService knowledgeService;
+    private KnowledgeDatasetService knowledgeDatasetService;
     private KnowledgeProperties properties;
 
     @BeforeEach
@@ -47,7 +47,7 @@ class KnowledgeServiceTest {
         OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
         KnowledgeHttpClient httpClient = new KnowledgeHttpClient(
                 properties, tokenManager, objectMapper, okHttpClient);
-        knowledgeService = new KnowledgeService(httpClient, properties);
+        knowledgeDatasetService = new KnowledgeDatasetService(httpClient, properties);
     }
 
     @AfterEach
@@ -62,7 +62,7 @@ class KnowledgeServiceTest {
                 .setHeader("Content-Type", "application/json")
                 .setBody("{\"id\":\"dataset-123\",\"name\":\"test-dataset\"}"));
 
-        DatasetResponse response = knowledgeService.createDataset("test-dataset");
+        DatasetResponse response = knowledgeDatasetService.createDataset("test-dataset");
 
         assertNotNull(response);
         assertEquals("dataset-123", response.getId());
@@ -90,7 +90,7 @@ class KnowledgeServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "test.txt", "text/plain", "hello world".getBytes());
 
-        List<String> results = knowledgeService.uploadDocuments(
+        List<String> results = knowledgeDatasetService.uploadDocuments(
                 "test-dataset", Arrays.asList(file));
 
         assertNotNull(results);
@@ -119,7 +119,7 @@ class KnowledgeServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "doc.pdf", "application/pdf", "pdf content".getBytes());
 
-        List<String> results = knowledgeService.uploadToUserDataset(
+        List<String> results = knowledgeDatasetService.uploadToUserDataset(
                 "1001", Arrays.asList(file));
 
         assertNotNull(results);
@@ -148,7 +148,7 @@ class KnowledgeServiceTest {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "readme.md", "text/markdown", "# README".getBytes());
 
-        List<String> results = knowledgeService.uploadToPublicDataset(Arrays.asList(file));
+        List<String> results = knowledgeDatasetService.uploadToPublicDataset(Arrays.asList(file));
 
         assertNotNull(results);
         assertFalse(results.isEmpty());
@@ -210,7 +210,7 @@ class KnowledgeServiceTest {
                 .setHeader("Content-Type", "application/json")
                 .setBody("{\"batch\":\"batch-3\"}"));
 
-        List<String> results = knowledgeService.uploadDocuments(
+        List<String> results = knowledgeDatasetService.uploadDocuments(
                 "batch-test", new ArrayList<>(files));
 
         assertEquals(3, results.size());
@@ -224,7 +224,7 @@ class KnowledgeServiceTest {
         mockServer.enqueue(new MockResponse().setResponseCode(204));
 
         assertDoesNotThrow(() ->
-                knowledgeService.deleteDocument("ds-001", "doc-001"));
+                knowledgeDatasetService.deleteDocument("ds-001", "doc-001"));
     }
 
     @Test
@@ -232,7 +232,7 @@ class KnowledgeServiceTest {
         mockServer.enqueue(new MockResponse().setResponseCode(204));
 
         assertDoesNotThrow(() ->
-                knowledgeService.deleteDataset("ds-001"));
+                knowledgeDatasetService.deleteDataset("ds-001"));
     }
 
     @Test
@@ -242,19 +242,19 @@ class KnowledgeServiceTest {
                 "file", "large.txt", "text/plain", largeContent);
 
         assertThrows(KnowledgeException.class, () ->
-                knowledgeService.uploadDocuments("test-dataset", Arrays.asList(largeFile)));
+                knowledgeDatasetService.uploadDocuments("test-dataset", Arrays.asList(largeFile)));
     }
 
     @Test
     void testEmptyFileList() {
         assertThrows(KnowledgeException.class, () ->
-                knowledgeService.uploadDocuments("test-dataset", new ArrayList<>()));
+                knowledgeDatasetService.uploadDocuments("test-dataset", new ArrayList<>()));
     }
 
     @Test
     void testUserDatasetNaming() {
         assertEquals("user_", properties.getUserDatasetPrefix());
-        assertEquals("public_scf", properties.getPublicDatasetName());
+        assertEquals("public_dataset", properties.getPublicDatasetName());
     }
 
     @Test

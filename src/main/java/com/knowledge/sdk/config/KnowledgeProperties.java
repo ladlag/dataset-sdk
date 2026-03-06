@@ -53,7 +53,7 @@ public class KnowledgeProperties {
     /**
      * Public dataset name
      */
-    private String publicDatasetName = "public_scf";
+    private String publicDatasetName = "public_dataset";
 
     /**
      * User dataset name prefix

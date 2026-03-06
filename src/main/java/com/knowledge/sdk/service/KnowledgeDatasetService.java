@@ -14,16 +14,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class KnowledgeService {
+public class KnowledgeDatasetService {
 
-    private static final Logger log = LoggerFactory.getLogger(KnowledgeService.class);
+    private static final Logger log = LoggerFactory.getLogger(KnowledgeDatasetService.class);
 
     private final KnowledgeHttpClient httpClient;
     private final KnowledgeProperties properties;
 
     private final ConcurrentHashMap<String, String> datasetCache = new ConcurrentHashMap<>();
 
-    public KnowledgeService(KnowledgeHttpClient httpClient, KnowledgeProperties properties) {
+    public KnowledgeDatasetService(KnowledgeHttpClient httpClient, KnowledgeProperties properties) {
         this.httpClient = httpClient;
         this.properties = properties;
     }

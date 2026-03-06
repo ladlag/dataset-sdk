@@ -3,7 +3,7 @@ package com.knowledge.sdk.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.knowledge.sdk.auth.TokenManager;
 import com.knowledge.sdk.client.KnowledgeHttpClient;
-import com.knowledge.sdk.service.KnowledgeService;
+import com.knowledge.sdk.service.KnowledgeDatasetService;
 import okhttp3.ConnectionPool;
 import okhttp3.OkHttpClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -17,9 +17,9 @@ import java.util.concurrent.TimeUnit;
 @EnableConfigurationProperties(KnowledgeProperties.class)
 public class KnowledgeAutoConfiguration {
 
-    @Bean
-    @ConditionalOnMissingBean
-    public OkHttpClient knowledgeOkHttpClient(KnowledgeProperties properties) {
+    @Bean("knowledgeSdkOkHttpClient")
+    @ConditionalOnMissingBean(name = "knowledgeSdkOkHttpClient")
+    public OkHttpClient knowledgeSdkOkHttpClient(KnowledgeProperties properties) {
         return new OkHttpClient.Builder()
                 .connectTimeout(properties.getConnectTimeoutSeconds(), TimeUnit.SECONDS)
                 .readTimeout(properties.getReadTimeoutSeconds(), TimeUnit.SECONDS)
@@ -28,33 +28,33 @@ public class KnowledgeAutoConfiguration {
                 .build();
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public ObjectMapper knowledgeObjectMapper() {
+    @Bean("knowledgeSdkObjectMapper")
+    @ConditionalOnMissingBean(name = "knowledgeSdkObjectMapper")
+    public ObjectMapper knowledgeSdkObjectMapper() {
         return new ObjectMapper();
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public TokenManager tokenManager(KnowledgeProperties properties,
-                                     OkHttpClient knowledgeOkHttpClient,
-                                     ObjectMapper knowledgeObjectMapper) {
-        return new TokenManager(properties, knowledgeOkHttpClient, knowledgeObjectMapper);
+    @Bean("knowledgeSdkTokenManager")
+    @ConditionalOnMissingBean(name = "knowledgeSdkTokenManager")
+    public TokenManager knowledgeSdkTokenManager(KnowledgeProperties properties,
+                                                  OkHttpClient knowledgeSdkOkHttpClient,
+                                                  ObjectMapper knowledgeSdkObjectMapper) {
+        return new TokenManager(properties, knowledgeSdkOkHttpClient, knowledgeSdkObjectMapper);
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public KnowledgeHttpClient knowledgeHttpClient(KnowledgeProperties properties,
-                                                    TokenManager tokenManager,
-                                                    ObjectMapper knowledgeObjectMapper,
-                                                    OkHttpClient knowledgeOkHttpClient) {
-        return new KnowledgeHttpClient(properties, tokenManager, knowledgeObjectMapper, knowledgeOkHttpClient);
+    @Bean("knowledgeSdkHttpClient")
+    @ConditionalOnMissingBean(name = "knowledgeSdkHttpClient")
+    public KnowledgeHttpClient knowledgeSdkHttpClient(KnowledgeProperties properties,
+                                                       TokenManager knowledgeSdkTokenManager,
+                                                       ObjectMapper knowledgeSdkObjectMapper,
+                                                       OkHttpClient knowledgeSdkOkHttpClient) {
+        return new KnowledgeHttpClient(properties, knowledgeSdkTokenManager, knowledgeSdkObjectMapper, knowledgeSdkOkHttpClient);
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    public KnowledgeService knowledgeService(KnowledgeHttpClient knowledgeHttpClient,
-                                              KnowledgeProperties properties) {
-        return new KnowledgeService(knowledgeHttpClient, properties);
+    @Bean("knowledgeDatasetService")
+    @ConditionalOnMissingBean(name = "knowledgeDatasetService")
+    public KnowledgeDatasetService knowledgeDatasetService(KnowledgeHttpClient knowledgeSdkHttpClient,
+                                                            KnowledgeProperties properties) {
+        return new KnowledgeDatasetService(knowledgeSdkHttpClient, properties);
     }
 }
