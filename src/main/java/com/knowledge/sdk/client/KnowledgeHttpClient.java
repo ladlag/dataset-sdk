@@ -33,11 +33,47 @@ public class KnowledgeHttpClient {
         this.httpClient = httpClient;
     }
 
+    // ===== Default user methods (using default token) =====
+
     public DatasetResponse createDataset(String name) {
+        return createDataset(name, null, null);
+    }
+
+    public FileUploadResponse uploadFile(MultipartFile file) {
+        return uploadFile(file, null, null);
+    }
+
+    public List<FileUploadResponse> uploadFiles(List<MultipartFile> files) {
+        return uploadFiles(files, null, null);
+    }
+
+    public String createDocumentInDataset(String datasetId, List<String> fileIds) {
+        return createDocumentInDataset(datasetId, fileIds, null, null);
+    }
+
+    public String initDatasetWithDocuments(String datasetName, List<String> fileIds) {
+        return initDatasetWithDocuments(datasetName, fileIds, null, null);
+    }
+
+    public DatasetListResponse listDatasets(String keyword, int page, int limit) {
+        return listDatasets(keyword, page, limit, null, null);
+    }
+
+    public void deleteDocument(String datasetId, String documentId) {
+        deleteDocument(datasetId, documentId, null, null);
+    }
+
+    public void deleteDataset(String datasetId) {
+        deleteDataset(datasetId, null, null);
+    }
+
+    // ===== Per-user methods (using user-specific token) =====
+
+    public DatasetResponse createDataset(String name, String username, String email) {
         String url = properties.getBaseUrl() + "/console/api/datasets/init";
         String body = "{\"name\":\"" + escapeJson(name) + "\"}";
 
-        String responseBody = executeWithRetry("POST", url, body);
+        String responseBody = executeWithRetry("POST", url, body, username, email);
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             JsonNode datasetNode = root.has("dataset") ? root.get("dataset") : root;
@@ -47,7 +83,7 @@ public class KnowledgeHttpClient {
         }
     }
 
-    public FileUploadResponse uploadFile(MultipartFile file) {
+    public FileUploadResponse uploadFile(MultipartFile file, String username, String email) {
         if (file.getSize() > properties.getMaxFileSize()) {
             throw new KnowledgeException("File size " + file.getSize()
                     + " exceeds maximum allowed size " + properties.getMaxFileSize());
@@ -66,7 +102,7 @@ public class KnowledgeHttpClient {
                     .addFormDataPart("file", file.getOriginalFilename(), fileBody)
                     .build();
 
-            String responseStr = executeMultipartWithRetry(url, requestBody);
+            String responseStr = executeMultipartWithRetry(url, requestBody, username, email);
             return objectMapper.readValue(responseStr, FileUploadResponse.class);
         } catch (KnowledgeException e) {
             throw e;
@@ -75,19 +111,19 @@ public class KnowledgeHttpClient {
         }
     }
 
-    public List<FileUploadResponse> uploadFiles(List<MultipartFile> files) {
+    public List<FileUploadResponse> uploadFiles(List<MultipartFile> files, String username, String email) {
         List<FileUploadResponse> results = new ArrayList<>();
         for (MultipartFile file : files) {
-            results.add(uploadFile(file));
+            results.add(uploadFile(file, username, email));
         }
         return results;
     }
 
-    public String createDocumentInDataset(String datasetId, List<String> fileIds) {
+    public String createDocumentInDataset(String datasetId, List<String> fileIds, String username, String email) {
         String url = properties.getBaseUrl() + "/console/api/datasets/" + datasetId + "/documents";
         String body = buildDocumentCreateBody(fileIds);
 
-        String responseBody = executeWithRetry("POST", url, body);
+        String responseBody = executeWithRetry("POST", url, body, username, email);
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             if (root.has("batch")) {
@@ -99,11 +135,11 @@ public class KnowledgeHttpClient {
         }
     }
 
-    public String initDatasetWithDocuments(String datasetName, List<String> fileIds) {
+    public String initDatasetWithDocuments(String datasetName, List<String> fileIds, String username, String email) {
         String url = properties.getBaseUrl() + "/console/api/datasets/init";
         String body = buildInitDatasetBody(datasetName, fileIds);
 
-        String responseBody = executeWithRetry("POST", url, body);
+        String responseBody = executeWithRetry("POST", url, body, username, email);
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             if (root.has("dataset") && root.get("dataset").has("id")) {
@@ -118,14 +154,14 @@ public class KnowledgeHttpClient {
         }
     }
 
-    public DatasetListResponse listDatasets(String keyword, int page, int limit) {
+    public DatasetListResponse listDatasets(String keyword, int page, int limit, String username, String email) {
         String url = properties.getBaseUrl() + "/console/api/datasets?page=" + page
                 + "&limit=" + limit;
         if (keyword != null && !keyword.isEmpty()) {
             url += "&keyword=" + keyword;
         }
 
-        String responseBody = executeWithRetry("GET", url, null);
+        String responseBody = executeWithRetry("GET", url, null, username, email);
         try {
             return objectMapper.readValue(responseBody, DatasetListResponse.class);
         } catch (Exception e) {
@@ -133,45 +169,62 @@ public class KnowledgeHttpClient {
         }
     }
 
-    public void deleteDocument(String datasetId, String documentId) {
+    public void deleteDocument(String datasetId, String documentId, String username, String email) {
         String url = properties.getBaseUrl() + "/console/api/datasets/" + datasetId
                 + "/documents/" + documentId;
-        executeWithRetry("DELETE", url, null);
+        executeWithRetry("DELETE", url, null, username, email);
     }
 
-    public void deleteDataset(String datasetId) {
+    public void deleteDataset(String datasetId, String username, String email) {
         String url = properties.getBaseUrl() + "/console/api/datasets/" + datasetId;
-        executeWithRetry("DELETE", url, null);
+        executeWithRetry("DELETE", url, null, username, email);
     }
 
-    private String executeWithRetry(String method, String url, String body) {
+    // ===== Internal execution with token resolution =====
+
+    private String executeWithRetry(String method, String url, String body, String username, String email) {
         try {
-            return doExecute(method, url, body, false);
+            return doExecute(method, url, body, false, username, email);
         } catch (KnowledgeException e) {
             if (e.getStatusCode() == 401) {
                 log.info("Received 401, refreshing token and retrying: {}", url);
-                tokenManager.invalidateToken();
-                return doExecute(method, url, body, true);
+                if (username != null && email != null) {
+                    tokenManager.invalidateTokenForUser(username, email);
+                } else {
+                    tokenManager.invalidateToken();
+                }
+                return doExecute(method, url, body, true, username, email);
             }
             throw e;
         }
     }
 
-    private String executeMultipartWithRetry(String url, RequestBody requestBody) {
+    private String executeMultipartWithRetry(String url, RequestBody requestBody, String username, String email) {
         try {
-            return doExecuteMultipart(url, requestBody, false);
+            return doExecuteMultipart(url, requestBody, false, username, email);
         } catch (KnowledgeException e) {
             if (e.getStatusCode() == 401) {
                 log.info("Received 401, refreshing token and retrying multipart: {}", url);
-                tokenManager.invalidateToken();
-                return doExecuteMultipart(url, requestBody, true);
+                if (username != null && email != null) {
+                    tokenManager.invalidateTokenForUser(username, email);
+                } else {
+                    tokenManager.invalidateToken();
+                }
+                return doExecuteMultipart(url, requestBody, true, username, email);
             }
             throw e;
         }
     }
 
-    private String doExecute(String method, String url, String body, boolean isRetry) {
-        String token = tokenManager.getToken();
+    private String resolveToken(String username, String email) {
+        if (username != null && email != null) {
+            return tokenManager.getTokenForUser(username, email);
+        }
+        return tokenManager.getToken();
+    }
+
+    private String doExecute(String method, String url, String body, boolean isRetry, String username, String email) {
+        String token = resolveToken(username, email);
 
         Request.Builder requestBuilder = new Request.Builder()
                 .url(url)
@@ -228,8 +281,8 @@ public class KnowledgeHttpClient {
         }
     }
 
-    private String doExecuteMultipart(String url, RequestBody requestBody, boolean isRetry) {
-        String token = tokenManager.getToken();
+    private String doExecuteMultipart(String url, RequestBody requestBody, boolean isRetry, String username, String email) {
+        String token = resolveToken(username, email);
 
         Request request = new Request.Builder()
                 .url(url)

@@ -37,7 +37,8 @@ class KnowledgeServiceTest {
         properties = new KnowledgeProperties();
         properties.setBaseUrl(mockServer.url("").toString().replaceAll("/$", ""));
         properties.setSystemToken("test-system-token");
-        properties.setUserInfo("testuser");
+        properties.setUsername("testuser");
+        properties.setEmail("testuser@example.com");
         properties.setMaxFilesPerBatch(10);
         properties.setMaxFileSize(20 * 1024 * 1024);
 
@@ -125,6 +126,35 @@ class KnowledgeServiceTest {
         assertNotNull(results);
         assertFalse(results.isEmpty());
         assertEquals("ds-user-1001", results.get(0));
+    }
+
+    @Test
+    void testUploadToUserDatasetWithUserCredentials() {
+        // Per-user token: login as specific user to create dataset under their account
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"data\":[],\"total\":0,\"page\":1,\"limit\":100}"));
+
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(201)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"id\":\"file-010\",\"name\":\"user-doc.pdf\"}"));
+
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"dataset\":{\"id\":\"ds-alice\"},\"batch\":\"batch-010\"}"));
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "user-doc.pdf", "application/pdf", "pdf content".getBytes());
+
+        List<String> results = knowledgeDatasetService.uploadToUserDataset(
+                "alice001", "alice", "alice@example.com", Arrays.asList(file));
+
+        assertNotNull(results);
+        assertFalse(results.isEmpty());
+        assertEquals("ds-alice", results.get(0));
     }
 
     @Test
@@ -273,6 +303,12 @@ class KnowledgeServiceTest {
         assertEquals(3, expectedBatches);
     }
 
+    @Test
+    void testPropertiesUsernameEmail() {
+        assertEquals("testuser", properties.getUsername());
+        assertEquals("testuser@example.com", properties.getEmail());
+    }
+
     /**
      * Simple mock TokenManager that returns a static token for testing,
      * without actually making SSO login calls.
@@ -288,12 +324,27 @@ class KnowledgeServiceTest {
         }
 
         @Override
+        public String getTokenForUser(String username, String email) {
+            return "mock-user-token-" + username;
+        }
+
+        @Override
         public String refreshToken() {
             return "mock-test-token";
         }
 
         @Override
+        public String refreshTokenForUser(String username, String email) {
+            return "mock-user-token-" + username;
+        }
+
+        @Override
         public void invalidateToken() {
+            // no-op
+        }
+
+        @Override
+        public void invalidateTokenForUser(String username, String email) {
             // no-op
         }
     }

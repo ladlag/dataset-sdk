@@ -29,7 +29,7 @@ public class KnowledgeDatasetService {
     }
 
     /**
-     * Upload documents to a user's personal knowledge base.
+     * Upload documents to a user's personal knowledge base using the default token.
      * Dataset name follows the pattern: user_{userId}
      * Creates the dataset automatically if it doesn't exist.
      *
@@ -40,6 +40,24 @@ public class KnowledgeDatasetService {
     public List<String> uploadToUserDataset(String userId, List<MultipartFile> files) {
         String datasetName = properties.getUserDatasetPrefix() + userId;
         return uploadDocuments(datasetName, files);
+    }
+
+    /**
+     * Upload documents to a user's personal knowledge base using a user-specific token.
+     * Logs in as the specified user via SSO to get their token,
+     * so the dataset is created under that user's account.
+     * Dataset name follows the pattern: user_{userId}
+     *
+     * @param userId   user identifier
+     * @param username the user's username for SSO login
+     * @param email    the user's email for SSO login
+     * @param files    files to upload
+     * @return list of batch results (one per batch)
+     */
+    public List<String> uploadToUserDataset(String userId, String username, String email,
+                                             List<MultipartFile> files) {
+        String datasetName = properties.getUserDatasetPrefix() + userId;
+        return uploadDocuments(datasetName, files, username, email);
     }
 
     /**
@@ -54,7 +72,7 @@ public class KnowledgeDatasetService {
     }
 
     /**
-     * Upload documents to a named knowledge base.
+     * Upload documents to a named knowledge base using the default token.
      * Creates the dataset automatically if it doesn't exist.
      * Automatically splits into batches if more than maxFilesPerBatch files.
      *
@@ -63,6 +81,22 @@ public class KnowledgeDatasetService {
      * @return list of batch results (one per batch)
      */
     public List<String> uploadDocuments(String datasetName, List<MultipartFile> files) {
+        return uploadDocuments(datasetName, files, null, null);
+    }
+
+    /**
+     * Upload documents to a named knowledge base using a user-specific token.
+     * Creates the dataset automatically if it doesn't exist.
+     * Automatically splits into batches if more than maxFilesPerBatch files.
+     *
+     * @param datasetName name of the knowledge base
+     * @param files       files to upload
+     * @param username    the user's username for SSO login (null for default token)
+     * @param email       the user's email for SSO login (null for default token)
+     * @return list of batch results (one per batch)
+     */
+    public List<String> uploadDocuments(String datasetName, List<MultipartFile> files,
+                                         String username, String email) {
         validateFiles(files);
 
         log.info("Uploading {} files to dataset '{}'", files.size(), datasetName);
@@ -70,14 +104,14 @@ public class KnowledgeDatasetService {
         List<List<MultipartFile>> batches = splitIntoBatches(files);
         log.info("Split into {} batches", batches.size());
 
-        String datasetId = findOrCacheDatasetId(datasetName);
+        String datasetId = findOrCacheDatasetId(datasetName, username, email);
         List<String> results = new ArrayList<>();
 
         for (int i = 0; i < batches.size(); i++) {
             List<MultipartFile> batch = batches.get(i);
             log.info("Processing batch {}/{} with {} files", i + 1, batches.size(), batch.size());
 
-            List<FileUploadResponse> uploadedFiles = httpClient.uploadFiles(batch);
+            List<FileUploadResponse> uploadedFiles = httpClient.uploadFiles(batch, username, email);
             List<String> fileIds = new ArrayList<>();
             for (FileUploadResponse uploadResponse : uploadedFiles) {
                 fileIds.add(uploadResponse.getId());
@@ -85,11 +119,11 @@ public class KnowledgeDatasetService {
 
             if (datasetId == null) {
                 log.info("Dataset '{}' not found, creating with initial documents", datasetName);
-                datasetId = httpClient.initDatasetWithDocuments(datasetName, fileIds);
+                datasetId = httpClient.initDatasetWithDocuments(datasetName, fileIds, username, email);
                 datasetCache.put(datasetName, datasetId);
                 results.add(datasetId);
             } else {
-                String batchResult = httpClient.createDocumentInDataset(datasetId, fileIds);
+                String batchResult = httpClient.createDocumentInDataset(datasetId, fileIds, username, email);
                 results.add(batchResult);
             }
         }
@@ -98,14 +132,26 @@ public class KnowledgeDatasetService {
     }
 
     /**
-     * Create a knowledge base.
+     * Create a knowledge base using the default token.
      *
      * @param name name of the knowledge base
      * @return created dataset info
      */
     public DatasetResponse createDataset(String name) {
+        return createDataset(name, null, null);
+    }
+
+    /**
+     * Create a knowledge base using a user-specific token.
+     *
+     * @param name     name of the knowledge base
+     * @param username the user's username for SSO login
+     * @param email    the user's email for SSO login
+     * @return created dataset info
+     */
+    public DatasetResponse createDataset(String name, String username, String email) {
         log.info("Creating dataset: {}", name);
-        DatasetResponse response = httpClient.createDataset(name);
+        DatasetResponse response = httpClient.createDataset(name, username, email);
         datasetCache.put(name, response.getId());
         return response;
     }
@@ -133,22 +179,22 @@ public class KnowledgeDatasetService {
         datasetCache.entrySet().removeIf(entry -> datasetId.equals(entry.getValue()));
     }
 
-    private String findOrCacheDatasetId(String datasetName) {
+    private String findOrCacheDatasetId(String datasetName, String username, String email) {
         String cachedId = datasetCache.get(datasetName);
         if (cachedId != null) {
             return cachedId;
         }
 
-        String existingId = findDatasetByName(datasetName);
+        String existingId = findDatasetByName(datasetName, username, email);
         if (existingId != null) {
             datasetCache.put(datasetName, existingId);
         }
         return existingId;
     }
 
-    private String findDatasetByName(String datasetName) {
+    private String findDatasetByName(String datasetName, String username, String email) {
         try {
-            DatasetListResponse response = httpClient.listDatasets(datasetName, 1, 100);
+            DatasetListResponse response = httpClient.listDatasets(datasetName, 1, 100, username, email);
             if (response.getData() != null) {
                 for (DatasetResponse dataset : response.getData()) {
                     if (datasetName.equals(dataset.getName())) {

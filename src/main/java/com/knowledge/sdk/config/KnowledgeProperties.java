@@ -16,9 +16,14 @@ public class KnowledgeProperties {
     private String systemToken;
 
     /**
-     * User info for SSO login (will be RSA-encrypted)
+     * Username for SSO login (part of HTTP_USER_INFO JSON: {"username":"...","email":"..."})
      */
-    private String userInfo;
+    private String username;
+
+    /**
+     * Email for SSO login (part of HTTP_USER_INFO JSON: {"username":"...","email":"..."})
+     */
+    private String email;
 
     /**
      * Token expiry buffer in seconds (refresh token before it actually expires)
@@ -76,12 +81,20 @@ public class KnowledgeProperties {
         this.systemToken = systemToken;
     }
 
-    public String getUserInfo() {
-        return userInfo;
+    public String getUsername() {
+        return username;
     }
 
-    public void setUserInfo(String userInfo) {
-        this.userInfo = userInfo;
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public long getTokenExpiryBufferSeconds() {

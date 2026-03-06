@@ -16,6 +16,7 @@ import java.security.KeyFactory;
 import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class TokenManager {
@@ -33,12 +34,17 @@ public class TokenManager {
 
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
+    private final ConcurrentHashMap<String, TokenEntry> userTokenCache = new ConcurrentHashMap<>();
+
     public TokenManager(KnowledgeProperties properties, OkHttpClient httpClient, ObjectMapper objectMapper) {
         this.properties = properties;
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Get the token for the default user (configured via properties).
+     */
     public String getToken() {
         lock.readLock().lock();
         try {
@@ -52,6 +58,25 @@ public class TokenManager {
         return refreshToken();
     }
 
+    /**
+     * Get a token for a specific user. Logs in as that user via SSO
+     * and caches the token per user key.
+     *
+     * @param username the user's username
+     * @param email    the user's email
+     * @return access token for this user
+     */
+    public String getTokenForUser(String username, String email) {
+        String cacheKey = buildCacheKey(username, email);
+
+        TokenEntry entry = userTokenCache.get(cacheKey);
+        if (entry != null && System.currentTimeMillis() < entry.expireTime) {
+            return entry.token;
+        }
+
+        return refreshTokenForUser(username, email);
+    }
+
     public String refreshToken() {
         lock.writeLock().lock();
         try {
@@ -59,8 +84,66 @@ public class TokenManager {
                 return token;
             }
 
-            log.info("Refreshing access token via SSO login");
-            String encryptedUserInfo = encryptUserInfo(properties.getUserInfo());
+            log.info("Refreshing access token via SSO login for default user");
+            String accessToken = doSsoLogin(properties.getUsername(), properties.getEmail());
+
+            this.token = accessToken;
+            this.expireTime = System.currentTimeMillis()
+                    + (DEFAULT_TOKEN_TTL_SECONDS - properties.getTokenExpiryBufferSeconds()) * 1000;
+
+            log.info("Default user access token refreshed successfully");
+            return this.token;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Refresh token for a specific user.
+     */
+    public String refreshTokenForUser(String username, String email) {
+        String cacheKey = buildCacheKey(username, email);
+
+        synchronized (cacheKey.intern()) {
+            TokenEntry entry = userTokenCache.get(cacheKey);
+            if (entry != null && System.currentTimeMillis() < entry.expireTime) {
+                return entry.token;
+            }
+
+            log.info("Refreshing access token via SSO login for user: {}", username);
+            String accessToken = doSsoLogin(username, email);
+
+            long expiry = System.currentTimeMillis()
+                    + (DEFAULT_TOKEN_TTL_SECONDS - properties.getTokenExpiryBufferSeconds()) * 1000;
+            userTokenCache.put(cacheKey, new TokenEntry(accessToken, expiry));
+
+            log.info("User {} access token refreshed successfully", username);
+            return accessToken;
+        }
+    }
+
+    public void invalidateToken() {
+        lock.writeLock().lock();
+        try {
+            this.token = null;
+            this.expireTime = 0;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Invalidate token for a specific user.
+     */
+    public void invalidateTokenForUser(String username, String email) {
+        String cacheKey = buildCacheKey(username, email);
+        userTokenCache.remove(cacheKey);
+    }
+
+    private String doSsoLogin(String username, String email) {
+        try {
+            String userInfoJson = buildUserInfoJson(username, email);
+            String encryptedUserInfo = encryptUserInfo(userInfoJson);
 
             String url = properties.getBaseUrl() + SSO_LOGIN_PATH;
             String requestBody = objectMapper.writeValueAsString(
@@ -77,7 +160,7 @@ public class TokenManager {
             long startTime = System.currentTimeMillis();
             try (Response response = httpClient.newCall(request).execute()) {
                 long elapsed = System.currentTimeMillis() - startTime;
-                log.info("SSO login request: url={}, time={}ms, status={}", url, elapsed, response.code());
+                log.info("SSO login request: url={}, user={}, time={}ms, status={}", url, username, elapsed, response.code());
 
                 if (!response.isSuccessful()) {
                     String errorBody = response.body() != null ? response.body().string() : "";
@@ -95,31 +178,27 @@ public class TokenManager {
                     throw new KnowledgeException("SSO login response missing access_token");
                 }
 
-                this.token = accessToken;
-                this.expireTime = System.currentTimeMillis()
-                        + (DEFAULT_TOKEN_TTL_SECONDS - properties.getTokenExpiryBufferSeconds()) * 1000;
-
-                log.info("Access token refreshed successfully");
-                return this.token;
+                return accessToken;
             }
         } catch (KnowledgeException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Failed to refresh token", e);
+            log.error("Failed to refresh token for user: {}", username, e);
             throw new KnowledgeException("Failed to refresh token", e);
-        } finally {
-            lock.writeLock().unlock();
         }
     }
 
-    public void invalidateToken() {
-        lock.writeLock().lock();
-        try {
-            this.token = null;
-            this.expireTime = 0;
-        } finally {
-            lock.writeLock().unlock();
-        }
+    private String buildUserInfoJson(String username, String email) {
+        return "{\"username\":\"" + escapeJson(username) + "\",\"email\":\"" + escapeJson(email) + "\"}";
+    }
+
+    private String escapeJson(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     private String encryptUserInfo(String userInfo) {
@@ -154,5 +233,19 @@ public class TokenManager {
         X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         return keyFactory.generatePublic(keySpec);
+    }
+
+    private String buildCacheKey(String username, String email) {
+        return username + "|" + email;
+    }
+
+    private static class TokenEntry {
+        final String token;
+        final long expireTime;
+
+        TokenEntry(String token, long expireTime) {
+            this.token = token;
+            this.expireTime = expireTime;
+        }
     }
 }

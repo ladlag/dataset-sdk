@@ -40,7 +40,8 @@ mvn clean install
 knowledge:
   base-url: https://your-knowledge-system-host:port
   system-token: your-system-token
-  user-info: your-user-info
+  username: admin                    # SSO 登录用户名
+  email: admin@example.com           # SSO 登录邮箱
   # 可选配置（以下为默认值）
   token-expiry-buffer-seconds: 300
   connect-timeout-seconds: 30
@@ -51,6 +52,8 @@ knowledge:
   public-dataset-name: public_dataset
   user-dataset-prefix: user_
 ```
+
+> **说明**：`username` 和 `email` 用于 SSO 登录，SDK 会将其构建为 `{"username":"...","email":"..."}` JSON 格式，经 RSA 加密后作为 `HTTP_USER_INFO` 发送。
 
 ### 3. 注入 SDK 服务
 
@@ -169,20 +172,43 @@ public List<String> uploadProductDocs(@RequestParam("files") List<MultipartFile>
 
 上传文档到用户个人知识库，知识库名称自动按 `user_{userId}` 规则命名。如果用户的知识库不存在，SDK 自动创建。
 
+**方式一：使用默认 token（知识库在默认用户下）**
+
 ```java
 /**
- * 场景5：上传到个人知识库
- * 
- * 知识库命名规则：user_{userId}
- * 例如：userId=1001 -> 知识库名称为 "user_1001"
+ * 使用配置文件中的默认用户 token 上传
  */
 @PostMapping("/users/{userId}/documents")
 public List<String> uploadToUserDataset(@PathVariable String userId,
                                          @RequestParam("files") List<MultipartFile> files) {
-    // SDK 自动将知识库名称拼接为 "user_1001"
-    // 如果 user_1001 知识库不存在，自动创建
     List<String> results = knowledgeDatasetService.uploadToUserDataset(userId, files);
-    System.out.println("已上传到用户 " + userId + " 的个人知识库");
+    return results;
+}
+```
+
+**方式二：使用用户专属 token（知识库在该用户账户下）**
+
+不同用户登录后拿到不同的 token，传不同的 token 创建知识库时，知识库会归属于对应用户。
+
+```java
+/**
+ * 场景5：上传到个人知识库（按用户身份登录）
+ *
+ * SDK 会以该用户的 username/email 通过 SSO 登录获取专属 token，
+ * 用该 token 创建/上传知识库，知识库归属于该用户账户。
+ *
+ * HTTP_USER_INFO 数据格式：{"username": "alice", "email": "alice@example.com"}
+ */
+@PostMapping("/users/{userId}/documents")
+public List<String> uploadToUserDataset(@PathVariable String userId,
+                                         @RequestParam String username,
+                                         @RequestParam String email,
+                                         @RequestParam("files") List<MultipartFile> files) {
+    // SDK 以 alice 的身份登录，获取 alice 的 token
+    // 用 alice 的 token 创建知识库 "user_alice001"，该知识库归属于 alice
+    List<String> results = knowledgeDatasetService.uploadToUserDataset(
+            userId, username, email, files);
+    System.out.println("已上传到用户 " + userId + " 的个人知识库（使用用户专属 token）");
     return results;
 }
 ```
@@ -247,6 +273,14 @@ SDK 自动处理以下逻辑：
 - Token 缓存，未过期时复用
 - Token 过期前自动刷新（提前 `tokenExpiryBufferSeconds` 秒刷新）
 - 接口返回 `401` 时自动重新登录并重试请求
+- **支持多用户 token**：每个用户的 token 独立缓存和管理
+
+SSO 登录请求中的 `HTTP_USER_INFO` 数据格式为：
+```json
+{"username": "alice", "email": "alice@example.com"}
+```
+
+该 JSON 会经过 RSA 加密后发送到 SSO 接口。
 
 ```java
 /**
@@ -255,14 +289,16 @@ SDK 自动处理以下逻辑：
  * 只需配置 application.yml：
  *   knowledge.base-url: https://your-host
  *   knowledge.system-token: your-system-token
- *   knowledge.user-info: your-user-info
+ *   knowledge.username: your-username
+ *   knowledge.email: your-email
  *
  * SDK 会自动调用 SSO 登录接口获取 token：
  *   POST /tenant/api/app/account/sso_login
  *   Authorization: Bearer {systemToken}
- *   Body: { "HTTP_USER_INFO": "{rsaEncryptedUserInfo}" }
+ *   Body: { "HTTP_USER_INFO": "{rsaEncrypted({\"username\":\"...\",\"email\":\"...\"})}" }
  *
- * 所有后续接口调用自动携带 token，无需手动处理。
+ * 默认用户使用配置文件中的 username/email。
+ * 也支持按用户身份登录（见场景5），每个用户有独立的 token 缓存。
  */
 @PostMapping("/example")
 public List<String> example(@RequestParam("files") List<MultipartFile> files) {
@@ -326,12 +362,24 @@ public class KnowledgeController {
 
     // 场景4：上传时自动创建知识库（同场景2/3，知识库不存在时自动创建）
 
-    // 场景5：上传到个人知识库
+    // 场景5：上传到个人知识库（默认 token）
     @PostMapping("/users/{userId}/documents")
     public ResponseEntity<List<String>> uploadToUser(
             @PathVariable String userId,
             @RequestParam("files") List<MultipartFile> files) {
         List<String> results = knowledgeDatasetService.uploadToUserDataset(userId, files);
+        return ResponseEntity.ok(results);
+    }
+
+    // 场景5（扩展）：上传到个人知识库（用户专属 token，知识库归属该用户）
+    @PostMapping("/users/{userId}/documents/as-user")
+    public ResponseEntity<List<String>> uploadToUserAsUser(
+            @PathVariable String userId,
+            @RequestParam String username,
+            @RequestParam String email,
+            @RequestParam("files") List<MultipartFile> files) {
+        List<String> results = knowledgeDatasetService.uploadToUserDataset(
+                userId, username, email, files);
         return ResponseEntity.ok(results);
     }
 
