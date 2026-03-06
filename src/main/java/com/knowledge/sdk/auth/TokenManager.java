@@ -35,6 +35,7 @@ public class TokenManager {
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     private final ConcurrentHashMap<String, TokenEntry> userTokenCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Object> userLocks = new ConcurrentHashMap<>();
 
     public TokenManager(KnowledgeProperties properties, OkHttpClient httpClient, ObjectMapper objectMapper) {
         this.properties = properties;
@@ -67,6 +68,10 @@ public class TokenManager {
      * @return access token for this user
      */
     public String getTokenForUser(String username, String email) {
+        if (username == null || email == null) {
+            throw new KnowledgeException("Username and email must not be null for per-user token");
+        }
+
         String cacheKey = buildCacheKey(username, email);
 
         TokenEntry entry = userTokenCache.get(cacheKey);
@@ -103,8 +108,9 @@ public class TokenManager {
      */
     public String refreshTokenForUser(String username, String email) {
         String cacheKey = buildCacheKey(username, email);
+        Object userLock = userLocks.computeIfAbsent(cacheKey, k -> new Object());
 
-        synchronized (cacheKey.intern()) {
+        synchronized (userLock) {
             TokenEntry entry = userTokenCache.get(cacheKey);
             if (entry != null && System.currentTimeMillis() < entry.expireTime) {
                 return entry.token;
@@ -136,6 +142,9 @@ public class TokenManager {
      * Invalidate token for a specific user.
      */
     public void invalidateTokenForUser(String username, String email) {
+        if (username == null || email == null) {
+            return;
+        }
         String cacheKey = buildCacheKey(username, email);
         userTokenCache.remove(cacheKey);
     }
