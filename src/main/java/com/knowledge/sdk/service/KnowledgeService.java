@@ -130,7 +130,7 @@ public class KnowledgeService {
         log.info("Deleting dataset {}", datasetId);
         httpClient.deleteDataset(datasetId);
 
-        datasetCache.values().remove(datasetId);
+        datasetCache.entrySet().removeIf(entry -> datasetId.equals(entry.getValue()));
     }
 
     private String findOrCacheDatasetId(String datasetName) {

@@ -14,7 +14,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class KnowledgeHttpClient {
 
@@ -26,19 +25,6 @@ public class KnowledgeHttpClient {
     private final ObjectMapper objectMapper;
     private final TokenManager tokenManager;
 
-    public KnowledgeHttpClient(KnowledgeProperties properties, TokenManager tokenManager, ObjectMapper objectMapper) {
-        this.properties = properties;
-        this.tokenManager = tokenManager;
-        this.objectMapper = objectMapper;
-        this.httpClient = new OkHttpClient.Builder()
-                .connectTimeout(properties.getConnectTimeoutSeconds(), TimeUnit.SECONDS)
-                .readTimeout(properties.getReadTimeoutSeconds(), TimeUnit.SECONDS)
-                .writeTimeout(properties.getWriteTimeoutSeconds(), TimeUnit.SECONDS)
-                .connectionPool(new ConnectionPool(20, 5, TimeUnit.MINUTES))
-                .build();
-    }
-
-    // Constructor for testing with custom OkHttpClient
     public KnowledgeHttpClient(KnowledgeProperties properties, TokenManager tokenManager,
                                ObjectMapper objectMapper, OkHttpClient httpClient) {
         this.properties = properties;

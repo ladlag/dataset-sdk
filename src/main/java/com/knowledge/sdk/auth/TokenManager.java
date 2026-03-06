@@ -22,6 +22,7 @@ public class TokenManager {
 
     private static final Logger log = LoggerFactory.getLogger(TokenManager.class);
     private static final String SSO_LOGIN_PATH = "/tenant/api/app/account/sso_login";
+    private static final long DEFAULT_TOKEN_TTL_SECONDS = 3600;
 
     private final KnowledgeProperties properties;
     private final OkHttpClient httpClient;
@@ -96,7 +97,7 @@ public class TokenManager {
 
                 this.token = accessToken;
                 this.expireTime = System.currentTimeMillis()
-                        + (3600 - properties.getTokenExpiryBufferSeconds()) * 1000;
+                        + (DEFAULT_TOKEN_TTL_SECONDS - properties.getTokenExpiryBufferSeconds()) * 1000;
 
                 log.info("Access token refreshed successfully");
                 return this.token;

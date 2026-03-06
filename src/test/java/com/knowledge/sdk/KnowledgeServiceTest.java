@@ -7,6 +7,7 @@ import com.knowledge.sdk.config.KnowledgeProperties;
 import com.knowledge.sdk.exception.KnowledgeException;
 import com.knowledge.sdk.model.DatasetResponse;
 import com.knowledge.sdk.service.KnowledgeService;
+import okhttp3.OkHttpClient;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
@@ -43,8 +44,9 @@ class KnowledgeServiceTest {
         ObjectMapper objectMapper = new ObjectMapper();
 
         TokenManager tokenManager = new MockTokenManager(properties);
+        OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
         KnowledgeHttpClient httpClient = new KnowledgeHttpClient(
-                properties, tokenManager, objectMapper);
+                properties, tokenManager, objectMapper, okHttpClient);
         knowledgeService = new KnowledgeService(httpClient, properties);
     }
 

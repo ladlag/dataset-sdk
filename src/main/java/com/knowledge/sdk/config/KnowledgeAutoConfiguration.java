@@ -46,8 +46,9 @@ public class KnowledgeAutoConfiguration {
     @ConditionalOnMissingBean
     public KnowledgeHttpClient knowledgeHttpClient(KnowledgeProperties properties,
                                                     TokenManager tokenManager,
-                                                    ObjectMapper knowledgeObjectMapper) {
-        return new KnowledgeHttpClient(properties, tokenManager, knowledgeObjectMapper);
+                                                    ObjectMapper knowledgeObjectMapper,
+                                                    OkHttpClient knowledgeOkHttpClient) {
+        return new KnowledgeHttpClient(properties, tokenManager, knowledgeObjectMapper, knowledgeOkHttpClient);
     }
 
     @Bean
