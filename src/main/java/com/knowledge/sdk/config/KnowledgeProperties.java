@@ -135,9 +135,9 @@ public class KnowledgeProperties {
     private String processRuleMode = "custom";
 
     /**
-     * Segment separator for document chunking
+     * Segment separator for document chunking (default: two newlines)
      */
-    private String segmentSeparator = "\\n\\n";
+    private String segmentSeparator = "\n\n";
 
     /**
      * Maximum tokens per segment
@@ -195,12 +195,14 @@ public class KnowledgeProperties {
     private String weightType = "customized";
 
     /**
-     * Vector weight for hybrid search
+     * Vector weight for hybrid search.
+     * Note: vectorWeight and keywordWeight should sum to 1.0.
      */
     private double vectorWeight = 0.7;
 
     /**
-     * Keyword weight for hybrid search
+     * Keyword weight for hybrid search.
+     * Note: vectorWeight and keywordWeight should sum to 1.0.
      */
     private double keywordWeight = 0.3;
 

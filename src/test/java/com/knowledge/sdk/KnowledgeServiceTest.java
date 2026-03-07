@@ -371,7 +371,7 @@ class KnowledgeServiceTest {
         assertEquals("text_model", properties.getDocForm());
         assertEquals("English", properties.getDocLanguage());
         assertEquals("custom", properties.getProcessRuleMode());
-        assertEquals("\\n\\n", properties.getSegmentSeparator());
+        assertEquals("\n\n", properties.getSegmentSeparator());
         assertEquals(500, properties.getSegmentMaxTokens());
         assertEquals(50, properties.getSegmentChunkOverlap());
         assertEquals("hybrid_search", properties.getSearchMethod());
@@ -396,7 +396,7 @@ class KnowledgeServiceTest {
         customProperties.setDocForm("qa_model");
         customProperties.setDocLanguage("Chinese");
         customProperties.setProcessRuleMode("automatic");
-        customProperties.setSegmentSeparator("\\n");
+        customProperties.setSegmentSeparator("\n");
         customProperties.setSegmentMaxTokens(1000);
         customProperties.setSegmentChunkOverlap(100);
         customProperties.setSearchMethod("semantic_search");
@@ -417,7 +417,7 @@ class KnowledgeServiceTest {
         assertEquals("qa_model", customProperties.getDocForm());
         assertEquals("Chinese", customProperties.getDocLanguage());
         assertEquals("automatic", customProperties.getProcessRuleMode());
-        assertEquals("\\n", customProperties.getSegmentSeparator());
+        assertEquals("\n", customProperties.getSegmentSeparator());
         assertEquals(1000, customProperties.getSegmentMaxTokens());
         assertEquals(100, customProperties.getSegmentChunkOverlap());
         assertEquals("semantic_search", customProperties.getSearchMethod());
