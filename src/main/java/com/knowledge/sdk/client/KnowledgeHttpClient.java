@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -158,7 +160,11 @@ public class KnowledgeHttpClient {
         String url = properties.getBaseUrl() + "/console/api/datasets?page=" + page
                 + "&limit=" + limit;
         if (keyword != null && !keyword.isEmpty()) {
-            url += "&keyword=" + keyword;
+            try {
+                url += "&keyword=" + URLEncoder.encode(keyword, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                url += "&keyword=" + keyword;
+            }
         }
 
         String responseBody = executeWithRetry("GET", url, null, username, email);
@@ -323,42 +329,17 @@ public class KnowledgeHttpClient {
     }
 
     private String buildDocumentCreateBody(List<String> fileIds) {
-        StringBuilder fileIdsJson = new StringBuilder("[");
-        for (int i = 0; i < fileIds.size(); i++) {
-            if (i > 0) fileIdsJson.append(",");
-            fileIdsJson.append("\"").append(escapeJson(fileIds.get(i))).append("\"");
-        }
-        fileIdsJson.append("]");
-
-        return "{"
-                + "\"data_source\":{\"type\":\"upload_file\","
-                + "\"info_list\":{\"data_source_type\":\"upload_file\","
-                + "\"file_info_list\":{\"file_ids\":" + fileIdsJson + "}}},"
-                + "\"indexing_technique\":\"high_quality\","
-                + "\"process_rule\":{\"rules\":{"
-                + "\"pre_processing_rules\":["
-                + "{\"id\":\"remove_extra_spaces\",\"enabled\":true},"
-                + "{\"id\":\"remove_urls_emails\",\"enabled\":false}],"
-                + "\"segmentation\":{\"separator\":\"\\n\\n\",\"max_tokens\":500,\"chunk_overlap\":50}},"
-                + "\"mode\":\"custom\"},"
-                + "\"doc_form\":\"text_model\","
-                + "\"doc_language\":\"English\","
-                + "\"retrieval_model\":{\"search_method\":\"hybrid_search\","
-                + "\"reranking_enable\":true,"
-                + "\"reranking_model\":{\"reranking_provider_name\":\"langgenius/tongyi/tongyi\","
-                + "\"reranking_model_name\":\"gte-rerank-v2\"},"
-                + "\"top_k\":3,\"score_threshold_enabled\":false,\"score_threshold\":0.5,"
-                + "\"reranking_mode\":\"reranking_model\","
-                + "\"weights\":{\"weight_type\":\"customized\","
-                + "\"vector_setting\":{\"vector_weight\":0.7,"
-                + "\"embedding_provider_name\":\"\",\"embedding_model_name\":\"\"},"
-                + "\"keyword_setting\":{\"keyword_weight\":0.3}}},"
-                + "\"embedding_model\":\"text-embedding-v2\","
-                + "\"embedding_model_provider\":\"langgenius/tongyi/tongyi\""
-                + "}";
+        return "{" + buildDataSourceAndConfig(fileIds) + "}";
     }
 
     private String buildInitDatasetBody(String datasetName, List<String> fileIds) {
+        return "{"
+                + "\"name\":\"" + escapeJson(datasetName) + "\","
+                + buildDataSourceAndConfig(fileIds)
+                + "}";
+    }
+
+    private String buildDataSourceAndConfig(List<String> fileIds) {
         StringBuilder fileIdsJson = new StringBuilder("[");
         for (int i = 0; i < fileIds.size(); i++) {
             if (i > 0) fileIdsJson.append(",");
@@ -366,9 +347,7 @@ public class KnowledgeHttpClient {
         }
         fileIdsJson.append("]");
 
-        return "{"
-                + "\"name\":\"" + escapeJson(datasetName) + "\","
-                + "\"data_source\":{\"type\":\"upload_file\","
+        return "\"data_source\":{\"type\":\"upload_file\","
                 + "\"info_list\":{\"data_source_type\":\"upload_file\","
                 + "\"file_info_list\":{\"file_ids\":" + fileIdsJson + "}}},"
                 + "\"indexing_technique\":\"high_quality\","
@@ -391,8 +370,7 @@ public class KnowledgeHttpClient {
                 + "\"embedding_provider_name\":\"\",\"embedding_model_name\":\"\"},"
                 + "\"keyword_setting\":{\"keyword_weight\":0.3}}},"
                 + "\"embedding_model\":\"text-embedding-v2\","
-                + "\"embedding_model_provider\":\"langgenius/tongyi/tongyi\""
-                + "}";
+                + "\"embedding_model_provider\":\"langgenius/tongyi/tongyi\"";
     }
 
     private String escapeJson(String value) {

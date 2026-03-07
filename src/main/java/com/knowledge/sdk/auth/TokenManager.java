@@ -37,6 +37,8 @@ public class TokenManager {
     private final ConcurrentHashMap<String, TokenEntry> userTokenCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Object> userLocks = new ConcurrentHashMap<>();
 
+    private volatile PublicKey cachedPublicKey;
+
     public TokenManager(KnowledgeProperties properties, OkHttpClient httpClient, ObjectMapper objectMapper) {
         this.properties = properties;
         this.httpClient = httpClient;
@@ -212,13 +214,26 @@ public class TokenManager {
 
     private String encryptUserInfo(String userInfo) {
         try {
-            PublicKey publicKey = loadPublicKey();
+            PublicKey publicKey = getPublicKey();
             Cipher cipher = Cipher.getInstance("RSA");
             cipher.init(Cipher.ENCRYPT_MODE, publicKey);
             byte[] encrypted = cipher.doFinal(userInfo.getBytes("UTF-8"));
             return Base64.getEncoder().encodeToString(encrypted);
         } catch (Exception e) {
             throw new KnowledgeException("Failed to encrypt user info", e);
+        }
+    }
+
+    private PublicKey getPublicKey() throws Exception {
+        if (cachedPublicKey != null) {
+            return cachedPublicKey;
+        }
+        synchronized (this) {
+            if (cachedPublicKey != null) {
+                return cachedPublicKey;
+            }
+            cachedPublicKey = loadPublicKey();
+            return cachedPublicKey;
         }
     }
 

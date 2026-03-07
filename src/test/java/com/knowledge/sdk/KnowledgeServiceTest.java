@@ -19,7 +19,10 @@ import org.springframework.mock.web.MockMultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -319,6 +322,67 @@ class KnowledgeServiceTest {
         KnowledgeProperties customProperties = new KnowledgeProperties();
         customProperties.setRsaPublicKeyPath("custom_rsa_key.pem");
         assertEquals("custom_rsa_key.pem", customProperties.getRsaPublicKeyPath());
+    }
+
+    @Test
+    void testConcurrent20Uploads() throws InterruptedException {
+        int concurrency = 20;
+        ExecutorService executor = Executors.newFixedThreadPool(concurrency);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch doneLatch = new CountDownLatch(concurrency);
+        AtomicInteger successCount = new AtomicInteger(0);
+        List<Throwable> errors = Collections.synchronizedList(new ArrayList<>());
+
+        // Pre-populate dataset cache so each thread skips the list-datasets call
+        // Each concurrent user uploads to their own user dataset
+        for (int i = 0; i < concurrency; i++) {
+            final int idx = i;
+            // Enqueue responses for each user: file upload + create document
+            mockServer.enqueue(new MockResponse()
+                    .setResponseCode(200)
+                    .setHeader("Content-Type", "application/json")
+                    .setBody("{\"data\":[{\"id\":\"ds-user-" + idx + "\",\"name\":\"user_" + idx + "\"}],"
+                            + "\"total\":1,\"page\":1,\"limit\":100}"));
+            mockServer.enqueue(new MockResponse()
+                    .setResponseCode(201)
+                    .setHeader("Content-Type", "application/json")
+                    .setBody("{\"id\":\"file-" + idx + "\",\"name\":\"file" + idx + ".txt\"}"));
+            mockServer.enqueue(new MockResponse()
+                    .setResponseCode(200)
+                    .setHeader("Content-Type", "application/json")
+                    .setBody("{\"batch\":\"batch-" + idx + "\"}"));
+        }
+
+        for (int i = 0; i < concurrency; i++) {
+            final int idx = i;
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    MockMultipartFile file = new MockMultipartFile(
+                            "file", "file" + idx + ".txt", "text/plain",
+                            ("content " + idx).getBytes());
+                    List<String> results = knowledgeDatasetService.uploadToUserDataset(
+                            String.valueOf(idx), Arrays.asList(file));
+                    assertNotNull(results);
+                    assertFalse(results.isEmpty());
+                    successCount.incrementAndGet();
+                } catch (Throwable t) {
+                    errors.add(t);
+                } finally {
+                    doneLatch.countDown();
+                }
+            });
+        }
+
+        startLatch.countDown();
+        assertTrue(doneLatch.await(30, TimeUnit.SECONDS), "Timed out waiting for concurrent uploads");
+        executor.shutdown();
+
+        if (!errors.isEmpty()) {
+            errors.get(0).printStackTrace();
+        }
+        assertEquals(concurrency, successCount.get(),
+                "Expected all " + concurrency + " concurrent uploads to succeed, but " + errors.size() + " failed");
     }
 
     /**

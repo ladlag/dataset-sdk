@@ -5,6 +5,7 @@ import com.knowledge.sdk.auth.TokenManager;
 import com.knowledge.sdk.client.KnowledgeHttpClient;
 import com.knowledge.sdk.service.KnowledgeDatasetService;
 import okhttp3.ConnectionPool;
+import okhttp3.Dispatcher;
 import okhttp3.OkHttpClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -20,7 +21,12 @@ public class KnowledgeAutoConfiguration {
     @Bean("knowledgeSdkOkHttpClient")
     @ConditionalOnMissingBean(name = "knowledgeSdkOkHttpClient")
     public OkHttpClient knowledgeSdkOkHttpClient(KnowledgeProperties properties) {
+        Dispatcher dispatcher = new Dispatcher();
+        dispatcher.setMaxRequests(64);
+        dispatcher.setMaxRequestsPerHost(20);
+
         return new OkHttpClient.Builder()
+                .dispatcher(dispatcher)
                 .connectTimeout(properties.getConnectTimeoutSeconds(), TimeUnit.SECONDS)
                 .readTimeout(properties.getReadTimeoutSeconds(), TimeUnit.SECONDS)
                 .writeTimeout(properties.getWriteTimeoutSeconds(), TimeUnit.SECONDS)
