@@ -327,7 +327,12 @@ class KnowledgeServiceTest {
     @Test
     void testApiPathDefaults() {
         assertEquals("/tenant/api/app/account/sso_login", properties.getSsoLoginPath());
-        assertEquals("/console/api", properties.getApiPrefix());
+        assertEquals("/console/api/datasets/init", properties.getDatasetInitPath());
+        assertEquals("/console/api/files/upload", properties.getFileUploadPath());
+        assertEquals("/console/api/datasets", properties.getDatasetListPath());
+        assertEquals("/console/api/datasets/{datasetId}", properties.getDatasetByIdPath());
+        assertEquals("/console/api/datasets/{datasetId}/documents", properties.getDatasetDocumentsPath());
+        assertEquals("/console/api/datasets/{datasetId}/documents/{documentId}", properties.getDatasetDocumentByIdPath());
         assertEquals(3600, properties.getTokenTtlSeconds());
     }
 
@@ -335,11 +340,21 @@ class KnowledgeServiceTest {
     void testApiPathConfigurable() {
         KnowledgeProperties customProperties = new KnowledgeProperties();
         customProperties.setSsoLoginPath("/custom/sso/login");
-        customProperties.setApiPrefix("/api/v2");
+        customProperties.setDatasetInitPath("/api/v2/datasets/init");
+        customProperties.setFileUploadPath("/api/v2/files/upload");
+        customProperties.setDatasetListPath("/api/v2/datasets");
+        customProperties.setDatasetByIdPath("/api/v2/datasets/{datasetId}");
+        customProperties.setDatasetDocumentsPath("/api/v2/datasets/{datasetId}/documents");
+        customProperties.setDatasetDocumentByIdPath("/api/v2/datasets/{datasetId}/documents/{documentId}");
         customProperties.setTokenTtlSeconds(7200);
 
         assertEquals("/custom/sso/login", customProperties.getSsoLoginPath());
-        assertEquals("/api/v2", customProperties.getApiPrefix());
+        assertEquals("/api/v2/datasets/init", customProperties.getDatasetInitPath());
+        assertEquals("/api/v2/files/upload", customProperties.getFileUploadPath());
+        assertEquals("/api/v2/datasets", customProperties.getDatasetListPath());
+        assertEquals("/api/v2/datasets/{datasetId}", customProperties.getDatasetByIdPath());
+        assertEquals("/api/v2/datasets/{datasetId}/documents", customProperties.getDatasetDocumentsPath());
+        assertEquals("/api/v2/datasets/{datasetId}/documents/{documentId}", customProperties.getDatasetDocumentByIdPath());
         assertEquals(7200, customProperties.getTokenTtlSeconds());
     }
 
@@ -436,9 +451,9 @@ class KnowledgeServiceTest {
     }
 
     @Test
-    void testCustomApiPrefixUsedInRequests() throws InterruptedException {
-        // Verify that custom apiPrefix is used in actual HTTP requests
-        properties.setApiPrefix("/custom/api/v2");
+    void testCustomEndpointPathsUsedInRequests() throws InterruptedException {
+        // Verify that custom endpoint paths are used in actual HTTP requests
+        properties.setDatasetInitPath("/custom/api/v2/datasets/init");
 
         ObjectMapper objectMapper = new ObjectMapper();
         TokenManager tokenManager = new MockTokenManager(properties);
@@ -459,7 +474,7 @@ class KnowledgeServiceTest {
 
         RecordedRequest request = mockServer.takeRequest();
         assertTrue(request.getPath().startsWith("/custom/api/v2/datasets/init"),
-                "Expected custom API prefix in path but got: " + request.getPath());
+                "Expected custom endpoint path but got: " + request.getPath());
     }
 
     @Test

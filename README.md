@@ -55,7 +55,12 @@ knowledge:
   # API 路径配置（以下为默认值）
   sso-login-path: /tenant/api/app/account/sso_login  # SSO 登录接口路径
   token-ttl-seconds: 3600                             # Token 有效期（秒）
-  api-prefix: /console/api                            # 控制台 API 路径前缀
+  dataset-init-path: /console/api/datasets/init       # 创建/初始化知识库接口路径
+  file-upload-path: /console/api/files/upload         # 文件上传接口路径
+  dataset-list-path: /console/api/datasets            # 知识库列表接口路径
+  dataset-by-id-path: /console/api/datasets/{datasetId}  # 单个知识库操作路径
+  dataset-documents-path: /console/api/datasets/{datasetId}/documents  # 知识库文档操作路径
+  dataset-document-by-id-path: /console/api/datasets/{datasetId}/documents/{documentId}  # 单个文档操作路径
   # OkHttp 连接池配置（以下为默认值）
   max-requests: 64                                    # 最大并发请求数
   max-requests-per-host: 20                           # 每个主机最大并发请求数

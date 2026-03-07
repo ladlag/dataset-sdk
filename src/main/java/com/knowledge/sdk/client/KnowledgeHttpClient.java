@@ -72,7 +72,7 @@ public class KnowledgeHttpClient {
     // ===== Per-user methods (using user-specific token) =====
 
     public DatasetResponse createDataset(String name, String username, String email) {
-        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets/init";
+        String url = properties.getBaseUrl() + properties.getDatasetInitPath();
         String body = "{\"name\":\"" + escapeJson(name) + "\"}";
 
         String responseBody = executeWithRetry("POST", url, body, username, email);
@@ -91,7 +91,7 @@ public class KnowledgeHttpClient {
                     + " exceeds maximum allowed size " + properties.getMaxFileSize());
         }
 
-        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/files/upload?source=datasets";
+        String url = properties.getBaseUrl() + properties.getFileUploadPath() + "?source=datasets";
 
         try {
             RequestBody fileBody = RequestBody.create(
@@ -122,7 +122,8 @@ public class KnowledgeHttpClient {
     }
 
     public String createDocumentInDataset(String datasetId, List<String> fileIds, String username, String email) {
-        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets/" + datasetId + "/documents";
+        String url = properties.getBaseUrl() + properties.getDatasetDocumentsPath()
+                .replace("{datasetId}", datasetId);
         String body = buildDocumentCreateBody(fileIds);
 
         String responseBody = executeWithRetry("POST", url, body, username, email);
@@ -138,7 +139,7 @@ public class KnowledgeHttpClient {
     }
 
     public String initDatasetWithDocuments(String datasetName, List<String> fileIds, String username, String email) {
-        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets/init";
+        String url = properties.getBaseUrl() + properties.getDatasetInitPath();
         String body = buildInitDatasetBody(datasetName, fileIds);
 
         String responseBody = executeWithRetry("POST", url, body, username, email);
@@ -157,7 +158,7 @@ public class KnowledgeHttpClient {
     }
 
     public DatasetListResponse listDatasets(String keyword, int page, int limit, String username, String email) {
-        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets?page=" + page
+        String url = properties.getBaseUrl() + properties.getDatasetListPath() + "?page=" + page
                 + "&limit=" + limit;
         if (keyword != null && !keyword.isEmpty()) {
             try {
@@ -176,13 +177,15 @@ public class KnowledgeHttpClient {
     }
 
     public void deleteDocument(String datasetId, String documentId, String username, String email) {
-        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets/" + datasetId
-                + "/documents/" + documentId;
+        String url = properties.getBaseUrl() + properties.getDatasetDocumentByIdPath()
+                .replace("{datasetId}", datasetId)
+                .replace("{documentId}", documentId);
         executeWithRetry("DELETE", url, null, username, email);
     }
 
     public void deleteDataset(String datasetId, String username, String email) {
-        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets/" + datasetId;
+        String url = properties.getBaseUrl() + properties.getDatasetByIdPath()
+                .replace("{datasetId}", datasetId);
         executeWithRetry("DELETE", url, null, username, email);
     }
 

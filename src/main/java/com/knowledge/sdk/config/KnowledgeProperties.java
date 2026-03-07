@@ -86,9 +86,40 @@ public class KnowledgeProperties {
     private long tokenTtlSeconds = 3600;
 
     /**
-     * API path prefix for console endpoints (datasets, files, etc.)
+     * Full path for dataset init endpoint (create dataset / init dataset with documents).
+     * Appended to baseUrl.
      */
-    private String apiPrefix = "/console/api";
+    private String datasetInitPath = "/console/api/datasets/init";
+
+    /**
+     * Full path for file upload endpoint.
+     * Appended to baseUrl. Query parameter ?source=datasets is added automatically.
+     */
+    private String fileUploadPath = "/console/api/files/upload";
+
+    /**
+     * Full path for listing datasets.
+     * Appended to baseUrl. Query parameters (page, limit, keyword) are added automatically.
+     */
+    private String datasetListPath = "/console/api/datasets";
+
+    /**
+     * Path pattern for single dataset operations (e.g. delete dataset).
+     * {datasetId} is replaced at runtime.
+     */
+    private String datasetByIdPath = "/console/api/datasets/{datasetId}";
+
+    /**
+     * Path pattern for documents in a dataset (e.g. create documents).
+     * {datasetId} is replaced at runtime.
+     */
+    private String datasetDocumentsPath = "/console/api/datasets/{datasetId}/documents";
+
+    /**
+     * Path pattern for a single document in a dataset (e.g. delete document).
+     * {datasetId} and {documentId} are replaced at runtime.
+     */
+    private String datasetDocumentByIdPath = "/console/api/datasets/{datasetId}/documents/{documentId}";
 
     // ===== OkHttp connection pool configuration =====
 
@@ -336,12 +367,52 @@ public class KnowledgeProperties {
         this.tokenTtlSeconds = tokenTtlSeconds;
     }
 
-    public String getApiPrefix() {
-        return apiPrefix;
+    public String getDatasetInitPath() {
+        return datasetInitPath;
     }
 
-    public void setApiPrefix(String apiPrefix) {
-        this.apiPrefix = apiPrefix;
+    public void setDatasetInitPath(String datasetInitPath) {
+        this.datasetInitPath = datasetInitPath;
+    }
+
+    public String getFileUploadPath() {
+        return fileUploadPath;
+    }
+
+    public void setFileUploadPath(String fileUploadPath) {
+        this.fileUploadPath = fileUploadPath;
+    }
+
+    public String getDatasetListPath() {
+        return datasetListPath;
+    }
+
+    public void setDatasetListPath(String datasetListPath) {
+        this.datasetListPath = datasetListPath;
+    }
+
+    public String getDatasetByIdPath() {
+        return datasetByIdPath;
+    }
+
+    public void setDatasetByIdPath(String datasetByIdPath) {
+        this.datasetByIdPath = datasetByIdPath;
+    }
+
+    public String getDatasetDocumentsPath() {
+        return datasetDocumentsPath;
+    }
+
+    public void setDatasetDocumentsPath(String datasetDocumentsPath) {
+        this.datasetDocumentsPath = datasetDocumentsPath;
+    }
+
+    public String getDatasetDocumentByIdPath() {
+        return datasetDocumentByIdPath;
+    }
+
+    public void setDatasetDocumentByIdPath(String datasetDocumentByIdPath) {
+        this.datasetDocumentByIdPath = datasetDocumentByIdPath;
     }
 
     public int getMaxRequests() {
