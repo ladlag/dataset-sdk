@@ -163,7 +163,7 @@ public class KnowledgeHttpClient {
             try {
                 url += "&keyword=" + URLEncoder.encode(keyword, "UTF-8");
             } catch (UnsupportedEncodingException e) {
-                url += "&keyword=" + keyword;
+                throw new KnowledgeException("UTF-8 encoding not supported", e);
             }
         }
 

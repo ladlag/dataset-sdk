@@ -379,10 +379,13 @@ class KnowledgeServiceTest {
         executor.shutdown();
 
         if (!errors.isEmpty()) {
-            errors.get(0).printStackTrace();
+            for (Throwable t : errors) {
+                t.printStackTrace();
+            }
         }
         assertEquals(concurrency, successCount.get(),
-                "Expected all " + concurrency + " concurrent uploads to succeed, but " + errors.size() + " failed");
+                "Expected all " + concurrency + " concurrent uploads to succeed, but "
+                        + errors.size() + " failed: " + errors);
     }
 
     /**
