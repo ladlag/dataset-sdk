@@ -325,6 +325,144 @@ class KnowledgeServiceTest {
     }
 
     @Test
+    void testApiPathDefaults() {
+        assertEquals("/tenant/api/app/account/sso_login", properties.getSsoLoginPath());
+        assertEquals("/console/api", properties.getApiPrefix());
+        assertEquals(3600, properties.getTokenTtlSeconds());
+    }
+
+    @Test
+    void testApiPathConfigurable() {
+        KnowledgeProperties customProperties = new KnowledgeProperties();
+        customProperties.setSsoLoginPath("/custom/sso/login");
+        customProperties.setApiPrefix("/api/v2");
+        customProperties.setTokenTtlSeconds(7200);
+
+        assertEquals("/custom/sso/login", customProperties.getSsoLoginPath());
+        assertEquals("/api/v2", customProperties.getApiPrefix());
+        assertEquals(7200, customProperties.getTokenTtlSeconds());
+    }
+
+    @Test
+    void testConnectionPoolDefaults() {
+        assertEquals(64, properties.getMaxRequests());
+        assertEquals(20, properties.getMaxRequestsPerHost());
+        assertEquals(20, properties.getConnectionPoolSize());
+        assertEquals(5, properties.getConnectionPoolKeepAliveMinutes());
+    }
+
+    @Test
+    void testConnectionPoolConfigurable() {
+        KnowledgeProperties customProperties = new KnowledgeProperties();
+        customProperties.setMaxRequests(128);
+        customProperties.setMaxRequestsPerHost(40);
+        customProperties.setConnectionPoolSize(50);
+        customProperties.setConnectionPoolKeepAliveMinutes(10);
+
+        assertEquals(128, customProperties.getMaxRequests());
+        assertEquals(40, customProperties.getMaxRequestsPerHost());
+        assertEquals(50, customProperties.getConnectionPoolSize());
+        assertEquals(10, customProperties.getConnectionPoolKeepAliveMinutes());
+    }
+
+    @Test
+    void testDocProcessingDefaults() {
+        assertEquals("high_quality", properties.getIndexingTechnique());
+        assertEquals("text_model", properties.getDocForm());
+        assertEquals("English", properties.getDocLanguage());
+        assertEquals("custom", properties.getProcessRuleMode());
+        assertEquals("\\n\\n", properties.getSegmentSeparator());
+        assertEquals(500, properties.getSegmentMaxTokens());
+        assertEquals(50, properties.getSegmentChunkOverlap());
+        assertEquals("hybrid_search", properties.getSearchMethod());
+        assertEquals(3, properties.getTopK());
+        assertFalse(properties.isScoreThresholdEnabled());
+        assertEquals(0.5, properties.getScoreThreshold());
+        assertTrue(properties.isRerankingEnable());
+        assertEquals("reranking_model", properties.getRerankingMode());
+        assertEquals("langgenius/tongyi/tongyi", properties.getRerankingProviderName());
+        assertEquals("gte-rerank-v2", properties.getRerankingModelName());
+        assertEquals("customized", properties.getWeightType());
+        assertEquals(0.7, properties.getVectorWeight());
+        assertEquals(0.3, properties.getKeywordWeight());
+        assertEquals("text-embedding-v2", properties.getEmbeddingModel());
+        assertEquals("langgenius/tongyi/tongyi", properties.getEmbeddingModelProvider());
+    }
+
+    @Test
+    void testDocProcessingConfigurable() {
+        KnowledgeProperties customProperties = new KnowledgeProperties();
+        customProperties.setIndexingTechnique("economy");
+        customProperties.setDocForm("qa_model");
+        customProperties.setDocLanguage("Chinese");
+        customProperties.setProcessRuleMode("automatic");
+        customProperties.setSegmentSeparator("\\n");
+        customProperties.setSegmentMaxTokens(1000);
+        customProperties.setSegmentChunkOverlap(100);
+        customProperties.setSearchMethod("semantic_search");
+        customProperties.setTopK(5);
+        customProperties.setScoreThresholdEnabled(true);
+        customProperties.setScoreThreshold(0.8);
+        customProperties.setRerankingEnable(false);
+        customProperties.setRerankingMode("weighted_score");
+        customProperties.setRerankingProviderName("custom/provider");
+        customProperties.setRerankingModelName("custom-rerank-v1");
+        customProperties.setWeightType("default");
+        customProperties.setVectorWeight(0.5);
+        customProperties.setKeywordWeight(0.5);
+        customProperties.setEmbeddingModel("custom-embedding");
+        customProperties.setEmbeddingModelProvider("custom/provider");
+
+        assertEquals("economy", customProperties.getIndexingTechnique());
+        assertEquals("qa_model", customProperties.getDocForm());
+        assertEquals("Chinese", customProperties.getDocLanguage());
+        assertEquals("automatic", customProperties.getProcessRuleMode());
+        assertEquals("\\n", customProperties.getSegmentSeparator());
+        assertEquals(1000, customProperties.getSegmentMaxTokens());
+        assertEquals(100, customProperties.getSegmentChunkOverlap());
+        assertEquals("semantic_search", customProperties.getSearchMethod());
+        assertEquals(5, customProperties.getTopK());
+        assertTrue(customProperties.isScoreThresholdEnabled());
+        assertEquals(0.8, customProperties.getScoreThreshold());
+        assertFalse(customProperties.isRerankingEnable());
+        assertEquals("weighted_score", customProperties.getRerankingMode());
+        assertEquals("custom/provider", customProperties.getRerankingProviderName());
+        assertEquals("custom-rerank-v1", customProperties.getRerankingModelName());
+        assertEquals("default", customProperties.getWeightType());
+        assertEquals(0.5, customProperties.getVectorWeight());
+        assertEquals(0.5, customProperties.getKeywordWeight());
+        assertEquals("custom-embedding", customProperties.getEmbeddingModel());
+        assertEquals("custom/provider", customProperties.getEmbeddingModelProvider());
+    }
+
+    @Test
+    void testCustomApiPrefixUsedInRequests() throws InterruptedException {
+        // Verify that custom apiPrefix is used in actual HTTP requests
+        properties.setApiPrefix("/custom/api/v2");
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        TokenManager tokenManager = new MockTokenManager(properties);
+        OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
+        KnowledgeHttpClient httpClient = new KnowledgeHttpClient(
+                properties, tokenManager, objectMapper, okHttpClient);
+        KnowledgeDatasetService customService = new KnowledgeDatasetService(httpClient, properties);
+
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"id\":\"dataset-custom\",\"name\":\"custom-test\"}"));
+
+        DatasetResponse response = customService.createDataset("custom-test");
+
+        assertNotNull(response);
+        assertEquals("dataset-custom", response.getId());
+
+        RecordedRequest request = mockServer.takeRequest();
+        assertTrue(request.getPath().startsWith("/custom/api/v2/datasets/init"),
+                "Expected custom API prefix in path but got: " + request.getPath());
+    }
+
+    @Test
     void testConcurrent20Uploads() throws InterruptedException {
         int concurrency = 20;
         ExecutorService executor = Executors.newFixedThreadPool(concurrency);

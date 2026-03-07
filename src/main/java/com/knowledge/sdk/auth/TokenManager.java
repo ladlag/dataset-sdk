@@ -22,8 +22,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class TokenManager {
 
     private static final Logger log = LoggerFactory.getLogger(TokenManager.class);
-    private static final String SSO_LOGIN_PATH = "/tenant/api/app/account/sso_login";
-    private static final long DEFAULT_TOKEN_TTL_SECONDS = 3600;
 
     private final KnowledgeProperties properties;
     private final OkHttpClient httpClient;
@@ -96,7 +94,7 @@ public class TokenManager {
 
             this.token = accessToken;
             this.expireTime = System.currentTimeMillis()
-                    + (DEFAULT_TOKEN_TTL_SECONDS - properties.getTokenExpiryBufferSeconds()) * 1000;
+                    + (properties.getTokenTtlSeconds() - properties.getTokenExpiryBufferSeconds()) * 1000;
 
             log.info("Default user access token refreshed successfully");
             return this.token;
@@ -122,7 +120,7 @@ public class TokenManager {
             String accessToken = doSsoLogin(username, email);
 
             long expiry = System.currentTimeMillis()
-                    + (DEFAULT_TOKEN_TTL_SECONDS - properties.getTokenExpiryBufferSeconds()) * 1000;
+                    + (properties.getTokenTtlSeconds() - properties.getTokenExpiryBufferSeconds()) * 1000;
             userTokenCache.put(cacheKey, new TokenEntry(accessToken, expiry));
 
             log.info("User {} access token refreshed successfully", username);
@@ -156,7 +154,7 @@ public class TokenManager {
             String userInfoJson = buildUserInfoJson(username, email);
             String encryptedUserInfo = encryptUserInfo(userInfoJson);
 
-            String url = properties.getBaseUrl() + SSO_LOGIN_PATH;
+            String url = properties.getBaseUrl() + properties.getSsoLoginPath();
             String requestBody = objectMapper.writeValueAsString(
                     java.util.Collections.singletonMap("HTTP_USER_INFO", encryptedUserInfo)
             );

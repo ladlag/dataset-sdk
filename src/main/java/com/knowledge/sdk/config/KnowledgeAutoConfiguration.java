@@ -22,15 +22,18 @@ public class KnowledgeAutoConfiguration {
     @ConditionalOnMissingBean(name = "knowledgeSdkOkHttpClient")
     public OkHttpClient knowledgeSdkOkHttpClient(KnowledgeProperties properties) {
         Dispatcher dispatcher = new Dispatcher();
-        dispatcher.setMaxRequests(64);
-        dispatcher.setMaxRequestsPerHost(20);
+        dispatcher.setMaxRequests(properties.getMaxRequests());
+        dispatcher.setMaxRequestsPerHost(properties.getMaxRequestsPerHost());
 
         return new OkHttpClient.Builder()
                 .dispatcher(dispatcher)
                 .connectTimeout(properties.getConnectTimeoutSeconds(), TimeUnit.SECONDS)
                 .readTimeout(properties.getReadTimeoutSeconds(), TimeUnit.SECONDS)
                 .writeTimeout(properties.getWriteTimeoutSeconds(), TimeUnit.SECONDS)
-                .connectionPool(new ConnectionPool(20, 5, TimeUnit.MINUTES))
+                .connectionPool(new ConnectionPool(
+                        properties.getConnectionPoolSize(),
+                        properties.getConnectionPoolKeepAliveMinutes(),
+                        TimeUnit.MINUTES))
                 .build();
     }
 

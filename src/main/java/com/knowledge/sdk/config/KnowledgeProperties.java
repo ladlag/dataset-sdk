@@ -72,6 +72,148 @@ public class KnowledgeProperties {
      */
     private String rsaPublicKeyPath = "rsa_public_key.pem";
 
+    // ===== API path configuration =====
+
+    /**
+     * SSO login endpoint path (appended to baseUrl)
+     */
+    private String ssoLoginPath = "/tenant/api/app/account/sso_login";
+
+    /**
+     * Token TTL in seconds. SDK will refresh the token before it expires
+     * (accounting for tokenExpiryBufferSeconds).
+     */
+    private long tokenTtlSeconds = 3600;
+
+    /**
+     * API path prefix for console endpoints (datasets, files, etc.)
+     */
+    private String apiPrefix = "/console/api";
+
+    // ===== OkHttp connection pool configuration =====
+
+    /**
+     * Maximum number of total concurrent OkHttp requests
+     */
+    private int maxRequests = 64;
+
+    /**
+     * Maximum number of concurrent OkHttp requests per host
+     */
+    private int maxRequestsPerHost = 20;
+
+    /**
+     * Number of idle connections to keep in the connection pool
+     */
+    private int connectionPoolSize = 20;
+
+    /**
+     * Keep-alive duration for idle connections in minutes
+     */
+    private int connectionPoolKeepAliveMinutes = 5;
+
+    // ===== Document processing configuration =====
+
+    /**
+     * Indexing technique for document processing
+     */
+    private String indexingTechnique = "high_quality";
+
+    /**
+     * Document form type
+     */
+    private String docForm = "text_model";
+
+    /**
+     * Document language
+     */
+    private String docLanguage = "English";
+
+    /**
+     * Process rule mode
+     */
+    private String processRuleMode = "custom";
+
+    /**
+     * Segment separator for document chunking
+     */
+    private String segmentSeparator = "\\n\\n";
+
+    /**
+     * Maximum tokens per segment
+     */
+    private int segmentMaxTokens = 500;
+
+    /**
+     * Chunk overlap tokens between segments
+     */
+    private int segmentChunkOverlap = 50;
+
+    /**
+     * Search method for retrieval model
+     */
+    private String searchMethod = "hybrid_search";
+
+    /**
+     * Top-K results for retrieval
+     */
+    private int topK = 3;
+
+    /**
+     * Whether score threshold is enabled for retrieval
+     */
+    private boolean scoreThresholdEnabled = false;
+
+    /**
+     * Score threshold value for retrieval
+     */
+    private double scoreThreshold = 0.5;
+
+    /**
+     * Whether reranking is enabled
+     */
+    private boolean rerankingEnable = true;
+
+    /**
+     * Reranking mode
+     */
+    private String rerankingMode = "reranking_model";
+
+    /**
+     * Reranking model provider name
+     */
+    private String rerankingProviderName = "langgenius/tongyi/tongyi";
+
+    /**
+     * Reranking model name
+     */
+    private String rerankingModelName = "gte-rerank-v2";
+
+    /**
+     * Weight type for retrieval
+     */
+    private String weightType = "customized";
+
+    /**
+     * Vector weight for hybrid search
+     */
+    private double vectorWeight = 0.7;
+
+    /**
+     * Keyword weight for hybrid search
+     */
+    private double keywordWeight = 0.3;
+
+    /**
+     * Embedding model name
+     */
+    private String embeddingModel = "text-embedding-v2";
+
+    /**
+     * Embedding model provider
+     */
+    private String embeddingModelProvider = "langgenius/tongyi/tongyi";
+
     public String getBaseUrl() {
         return baseUrl;
     }
@@ -174,5 +316,221 @@ public class KnowledgeProperties {
 
     public void setRsaPublicKeyPath(String rsaPublicKeyPath) {
         this.rsaPublicKeyPath = rsaPublicKeyPath;
+    }
+
+    public String getSsoLoginPath() {
+        return ssoLoginPath;
+    }
+
+    public void setSsoLoginPath(String ssoLoginPath) {
+        this.ssoLoginPath = ssoLoginPath;
+    }
+
+    public long getTokenTtlSeconds() {
+        return tokenTtlSeconds;
+    }
+
+    public void setTokenTtlSeconds(long tokenTtlSeconds) {
+        this.tokenTtlSeconds = tokenTtlSeconds;
+    }
+
+    public String getApiPrefix() {
+        return apiPrefix;
+    }
+
+    public void setApiPrefix(String apiPrefix) {
+        this.apiPrefix = apiPrefix;
+    }
+
+    public int getMaxRequests() {
+        return maxRequests;
+    }
+
+    public void setMaxRequests(int maxRequests) {
+        this.maxRequests = maxRequests;
+    }
+
+    public int getMaxRequestsPerHost() {
+        return maxRequestsPerHost;
+    }
+
+    public void setMaxRequestsPerHost(int maxRequestsPerHost) {
+        this.maxRequestsPerHost = maxRequestsPerHost;
+    }
+
+    public int getConnectionPoolSize() {
+        return connectionPoolSize;
+    }
+
+    public void setConnectionPoolSize(int connectionPoolSize) {
+        this.connectionPoolSize = connectionPoolSize;
+    }
+
+    public int getConnectionPoolKeepAliveMinutes() {
+        return connectionPoolKeepAliveMinutes;
+    }
+
+    public void setConnectionPoolKeepAliveMinutes(int connectionPoolKeepAliveMinutes) {
+        this.connectionPoolKeepAliveMinutes = connectionPoolKeepAliveMinutes;
+    }
+
+    public String getIndexingTechnique() {
+        return indexingTechnique;
+    }
+
+    public void setIndexingTechnique(String indexingTechnique) {
+        this.indexingTechnique = indexingTechnique;
+    }
+
+    public String getDocForm() {
+        return docForm;
+    }
+
+    public void setDocForm(String docForm) {
+        this.docForm = docForm;
+    }
+
+    public String getDocLanguage() {
+        return docLanguage;
+    }
+
+    public void setDocLanguage(String docLanguage) {
+        this.docLanguage = docLanguage;
+    }
+
+    public String getProcessRuleMode() {
+        return processRuleMode;
+    }
+
+    public void setProcessRuleMode(String processRuleMode) {
+        this.processRuleMode = processRuleMode;
+    }
+
+    public String getSegmentSeparator() {
+        return segmentSeparator;
+    }
+
+    public void setSegmentSeparator(String segmentSeparator) {
+        this.segmentSeparator = segmentSeparator;
+    }
+
+    public int getSegmentMaxTokens() {
+        return segmentMaxTokens;
+    }
+
+    public void setSegmentMaxTokens(int segmentMaxTokens) {
+        this.segmentMaxTokens = segmentMaxTokens;
+    }
+
+    public int getSegmentChunkOverlap() {
+        return segmentChunkOverlap;
+    }
+
+    public void setSegmentChunkOverlap(int segmentChunkOverlap) {
+        this.segmentChunkOverlap = segmentChunkOverlap;
+    }
+
+    public String getSearchMethod() {
+        return searchMethod;
+    }
+
+    public void setSearchMethod(String searchMethod) {
+        this.searchMethod = searchMethod;
+    }
+
+    public int getTopK() {
+        return topK;
+    }
+
+    public void setTopK(int topK) {
+        this.topK = topK;
+    }
+
+    public boolean isScoreThresholdEnabled() {
+        return scoreThresholdEnabled;
+    }
+
+    public void setScoreThresholdEnabled(boolean scoreThresholdEnabled) {
+        this.scoreThresholdEnabled = scoreThresholdEnabled;
+    }
+
+    public double getScoreThreshold() {
+        return scoreThreshold;
+    }
+
+    public void setScoreThreshold(double scoreThreshold) {
+        this.scoreThreshold = scoreThreshold;
+    }
+
+    public boolean isRerankingEnable() {
+        return rerankingEnable;
+    }
+
+    public void setRerankingEnable(boolean rerankingEnable) {
+        this.rerankingEnable = rerankingEnable;
+    }
+
+    public String getRerankingMode() {
+        return rerankingMode;
+    }
+
+    public void setRerankingMode(String rerankingMode) {
+        this.rerankingMode = rerankingMode;
+    }
+
+    public String getRerankingProviderName() {
+        return rerankingProviderName;
+    }
+
+    public void setRerankingProviderName(String rerankingProviderName) {
+        this.rerankingProviderName = rerankingProviderName;
+    }
+
+    public String getRerankingModelName() {
+        return rerankingModelName;
+    }
+
+    public void setRerankingModelName(String rerankingModelName) {
+        this.rerankingModelName = rerankingModelName;
+    }
+
+    public String getWeightType() {
+        return weightType;
+    }
+
+    public void setWeightType(String weightType) {
+        this.weightType = weightType;
+    }
+
+    public double getVectorWeight() {
+        return vectorWeight;
+    }
+
+    public void setVectorWeight(double vectorWeight) {
+        this.vectorWeight = vectorWeight;
+    }
+
+    public double getKeywordWeight() {
+        return keywordWeight;
+    }
+
+    public void setKeywordWeight(double keywordWeight) {
+        this.keywordWeight = keywordWeight;
+    }
+
+    public String getEmbeddingModel() {
+        return embeddingModel;
+    }
+
+    public void setEmbeddingModel(String embeddingModel) {
+        this.embeddingModel = embeddingModel;
+    }
+
+    public String getEmbeddingModelProvider() {
+        return embeddingModelProvider;
+    }
+
+    public void setEmbeddingModelProvider(String embeddingModelProvider) {
+        this.embeddingModelProvider = embeddingModelProvider;
     }
 }

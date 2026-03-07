@@ -72,7 +72,7 @@ public class KnowledgeHttpClient {
     // ===== Per-user methods (using user-specific token) =====
 
     public DatasetResponse createDataset(String name, String username, String email) {
-        String url = properties.getBaseUrl() + "/console/api/datasets/init";
+        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets/init";
         String body = "{\"name\":\"" + escapeJson(name) + "\"}";
 
         String responseBody = executeWithRetry("POST", url, body, username, email);
@@ -91,7 +91,7 @@ public class KnowledgeHttpClient {
                     + " exceeds maximum allowed size " + properties.getMaxFileSize());
         }
 
-        String url = properties.getBaseUrl() + "/console/api/files/upload?source=datasets";
+        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/files/upload?source=datasets";
 
         try {
             RequestBody fileBody = RequestBody.create(
@@ -122,7 +122,7 @@ public class KnowledgeHttpClient {
     }
 
     public String createDocumentInDataset(String datasetId, List<String> fileIds, String username, String email) {
-        String url = properties.getBaseUrl() + "/console/api/datasets/" + datasetId + "/documents";
+        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets/" + datasetId + "/documents";
         String body = buildDocumentCreateBody(fileIds);
 
         String responseBody = executeWithRetry("POST", url, body, username, email);
@@ -138,7 +138,7 @@ public class KnowledgeHttpClient {
     }
 
     public String initDatasetWithDocuments(String datasetName, List<String> fileIds, String username, String email) {
-        String url = properties.getBaseUrl() + "/console/api/datasets/init";
+        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets/init";
         String body = buildInitDatasetBody(datasetName, fileIds);
 
         String responseBody = executeWithRetry("POST", url, body, username, email);
@@ -157,7 +157,7 @@ public class KnowledgeHttpClient {
     }
 
     public DatasetListResponse listDatasets(String keyword, int page, int limit, String username, String email) {
-        String url = properties.getBaseUrl() + "/console/api/datasets?page=" + page
+        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets?page=" + page
                 + "&limit=" + limit;
         if (keyword != null && !keyword.isEmpty()) {
             try {
@@ -176,13 +176,13 @@ public class KnowledgeHttpClient {
     }
 
     public void deleteDocument(String datasetId, String documentId, String username, String email) {
-        String url = properties.getBaseUrl() + "/console/api/datasets/" + datasetId
+        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets/" + datasetId
                 + "/documents/" + documentId;
         executeWithRetry("DELETE", url, null, username, email);
     }
 
     public void deleteDataset(String datasetId, String username, String email) {
-        String url = properties.getBaseUrl() + "/console/api/datasets/" + datasetId;
+        String url = properties.getBaseUrl() + properties.getApiPrefix() + "/datasets/" + datasetId;
         executeWithRetry("DELETE", url, null, username, email);
     }
 
@@ -350,27 +350,31 @@ public class KnowledgeHttpClient {
         return "\"data_source\":{\"type\":\"upload_file\","
                 + "\"info_list\":{\"data_source_type\":\"upload_file\","
                 + "\"file_info_list\":{\"file_ids\":" + fileIdsJson + "}}},"
-                + "\"indexing_technique\":\"high_quality\","
+                + "\"indexing_technique\":\"" + escapeJson(properties.getIndexingTechnique()) + "\","
                 + "\"process_rule\":{\"rules\":{"
                 + "\"pre_processing_rules\":["
                 + "{\"id\":\"remove_extra_spaces\",\"enabled\":true},"
                 + "{\"id\":\"remove_urls_emails\",\"enabled\":false}],"
-                + "\"segmentation\":{\"separator\":\"\\n\\n\",\"max_tokens\":500,\"chunk_overlap\":50}},"
-                + "\"mode\":\"custom\"},"
-                + "\"doc_form\":\"text_model\","
-                + "\"doc_language\":\"English\","
-                + "\"retrieval_model\":{\"search_method\":\"hybrid_search\","
-                + "\"reranking_enable\":true,"
-                + "\"reranking_model\":{\"reranking_provider_name\":\"langgenius/tongyi/tongyi\","
-                + "\"reranking_model_name\":\"gte-rerank-v2\"},"
-                + "\"top_k\":3,\"score_threshold_enabled\":false,\"score_threshold\":0.5,"
-                + "\"reranking_mode\":\"reranking_model\","
-                + "\"weights\":{\"weight_type\":\"customized\","
-                + "\"vector_setting\":{\"vector_weight\":0.7,"
+                + "\"segmentation\":{\"separator\":\"" + escapeJson(properties.getSegmentSeparator()) + "\","
+                + "\"max_tokens\":" + properties.getSegmentMaxTokens() + ","
+                + "\"chunk_overlap\":" + properties.getSegmentChunkOverlap() + "}},"
+                + "\"mode\":\"" + escapeJson(properties.getProcessRuleMode()) + "\"},"
+                + "\"doc_form\":\"" + escapeJson(properties.getDocForm()) + "\","
+                + "\"doc_language\":\"" + escapeJson(properties.getDocLanguage()) + "\","
+                + "\"retrieval_model\":{\"search_method\":\"" + escapeJson(properties.getSearchMethod()) + "\","
+                + "\"reranking_enable\":" + properties.isRerankingEnable() + ","
+                + "\"reranking_model\":{\"reranking_provider_name\":\"" + escapeJson(properties.getRerankingProviderName()) + "\","
+                + "\"reranking_model_name\":\"" + escapeJson(properties.getRerankingModelName()) + "\"},"
+                + "\"top_k\":" + properties.getTopK() + ","
+                + "\"score_threshold_enabled\":" + properties.isScoreThresholdEnabled() + ","
+                + "\"score_threshold\":" + properties.getScoreThreshold() + ","
+                + "\"reranking_mode\":\"" + escapeJson(properties.getRerankingMode()) + "\","
+                + "\"weights\":{\"weight_type\":\"" + escapeJson(properties.getWeightType()) + "\","
+                + "\"vector_setting\":{\"vector_weight\":" + properties.getVectorWeight() + ","
                 + "\"embedding_provider_name\":\"\",\"embedding_model_name\":\"\"},"
-                + "\"keyword_setting\":{\"keyword_weight\":0.3}}},"
-                + "\"embedding_model\":\"text-embedding-v2\","
-                + "\"embedding_model_provider\":\"langgenius/tongyi/tongyi\"";
+                + "\"keyword_setting\":{\"keyword_weight\":" + properties.getKeywordWeight() + "}}},"
+                + "\"embedding_model\":\"" + escapeJson(properties.getEmbeddingModel()) + "\","
+                + "\"embedding_model_provider\":\"" + escapeJson(properties.getEmbeddingModelProvider()) + "\"";
     }
 
     private String escapeJson(String value) {

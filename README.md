@@ -52,6 +52,36 @@ knowledge:
   public-dataset-name: public_dataset
   user-dataset-prefix: user_
   rsa-public-key-path: rsa_public_key.pem  # RSA 公钥文件路径（classpath 下）
+  # API 路径配置（以下为默认值）
+  sso-login-path: /tenant/api/app/account/sso_login  # SSO 登录接口路径
+  token-ttl-seconds: 3600                             # Token 有效期（秒）
+  api-prefix: /console/api                            # 控制台 API 路径前缀
+  # OkHttp 连接池配置（以下为默认值）
+  max-requests: 64                                    # 最大并发请求数
+  max-requests-per-host: 20                           # 每个主机最大并发请求数
+  connection-pool-size: 20                            # 连接池大小
+  connection-pool-keep-alive-minutes: 5               # 连接保活时间（分钟）
+  # 文档处理配置（以下为默认值）
+  indexing-technique: high_quality                    # 索引技术
+  doc-form: text_model                                # 文档形式
+  doc-language: English                               # 文档语言
+  process-rule-mode: custom                           # 处理规则模式
+  segment-separator: "\\n\\n"                         # 分段分隔符
+  segment-max-tokens: 500                             # 每段最大 token 数
+  segment-chunk-overlap: 50                           # 分段重叠 token 数
+  search-method: hybrid_search                        # 检索方式
+  top-k: 3                                            # 检索返回 Top-K
+  score-threshold-enabled: false                      # 是否启用分数阈值
+  score-threshold: 0.5                                # 分数阈值
+  reranking-enable: true                              # 是否启用重排序
+  reranking-mode: reranking_model                     # 重排序模式
+  reranking-provider-name: langgenius/tongyi/tongyi   # 重排序模型提供商
+  reranking-model-name: gte-rerank-v2                 # 重排序模型名称
+  weight-type: customized                             # 权重类型
+  vector-weight: 0.7                                  # 向量权重
+  keyword-weight: 0.3                                 # 关键词权重
+  embedding-model: text-embedding-v2                  # 嵌入模型
+  embedding-model-provider: langgenius/tongyi/tongyi   # 嵌入模型提供商
 ```
 
 > **说明**：`username` 和 `email` 用于 SSO 登录，SDK 会将其构建为 `{"username":"...","email":"..."}` JSON 格式，经 RSA 加密后作为 `HTTP_USER_INFO` 发送。
