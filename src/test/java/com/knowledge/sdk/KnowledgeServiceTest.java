@@ -340,6 +340,30 @@ class KnowledgeServiceTest {
     }
 
     @Test
+    void testCustomUserDatasetPrefix() throws InterruptedException {
+        // Change prefix from default "user_" to "kb_"
+        properties.setUserDatasetPrefix("kb_");
+        try {
+            mockServer.enqueue(new MockResponse()
+                    .setResponseCode(200)
+                    .setHeader("Content-Type", "application/json")
+                    .setBody("{\"id\":\"ds-kb-alice\",\"name\":\"kb_alice001\"}"));
+
+            DatasetResponse response = knowledgeDatasetService.createUserDataset("alice001");
+
+            assertNotNull(response);
+            assertEquals("ds-kb-alice", response.getId());
+
+            // Verify the request body uses the custom prefix
+            RecordedRequest request = mockServer.takeRequest();
+            assertTrue(request.getBody().readUtf8().contains("kb_alice001"));
+        } finally {
+            // Restore default prefix
+            properties.setUserDatasetPrefix("user_");
+        }
+    }
+
+    @Test
     void testSplitIntoBatches() {
         // Test that 23 files produce 3 batches
         List<MockMultipartFile> files = new ArrayList<>();

@@ -35,8 +35,9 @@ knowledge:
   # 公共知识库名称（调用 uploadToPublicDataset 时使用此名称）
   public-dataset-name: public_dataset
 
-  # 个人知识库名称前缀（调用 uploadToUserDataset 时，名称 = 前缀 + userId）
+  # 个人知识库名称前缀（调用 createUserDataset / uploadToUserDataset 时，名称 = 前缀 + userId）
   # 例如 userId="alice001" → 知识库名称为 "user_alice001"
+  # 可修改为其他前缀，如 "kb_"、"personal_" 等
   user-dataset-prefix: user_
 
   # ------------------------------------------------------------------
