@@ -77,6 +77,10 @@ class KnowledgeServiceTest {
         String body = request.getBody().readUtf8();
         assertTrue(body.contains("\"indexing_technique\":\"high_quality\""),
                 "Request body should include indexing_technique");
+        assertTrue(body.contains("\"embedding_model\":\"text-embedding-v2\""),
+                "Request body should include embedding_model");
+        assertTrue(body.contains("\"embedding_model_provider\":\"langgenius/tongyi/tongyi\""),
+                "Request body should include embedding_model_provider");
     }
 
     @Test
