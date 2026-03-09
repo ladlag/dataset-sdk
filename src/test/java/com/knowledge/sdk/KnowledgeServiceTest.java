@@ -74,6 +74,55 @@ class KnowledgeServiceTest {
     }
 
     @Test
+    void testCreateUserDatasetWithDefaultToken() {
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"id\":\"ds-user-alice\",\"name\":\"user_alice001\"}"));
+
+        DatasetResponse response = knowledgeDatasetService.createUserDataset("alice001");
+
+        assertNotNull(response);
+        assertEquals("ds-user-alice", response.getId());
+        assertEquals("user_alice001", response.getName());
+    }
+
+    @Test
+    void testCreateUserDatasetWithUserCredentials() throws InterruptedException {
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"id\":\"ds-user-bob\",\"name\":\"user_bob002\"}"));
+
+        DatasetResponse response = knowledgeDatasetService.createUserDataset(
+                "bob002", "bob", "bob@example.com");
+
+        assertNotNull(response);
+        assertEquals("ds-user-bob", response.getId());
+        assertEquals("user_bob002", response.getName());
+
+        // Verify request was made to the correct path with correct dataset name
+        RecordedRequest request = mockServer.takeRequest();
+        assertEquals("POST", request.getMethod());
+        assertTrue(request.getPath().contains("/datasets/init"));
+        assertTrue(request.getBody().readUtf8().contains("user_bob002"));
+    }
+
+    @Test
+    void testCreatePublicDataset() {
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"id\":\"ds-public\",\"name\":\"public_dataset\"}"));
+
+        DatasetResponse response = knowledgeDatasetService.createPublicDataset();
+
+        assertNotNull(response);
+        assertEquals("ds-public", response.getId());
+        assertEquals("public_dataset", response.getName());
+    }
+
+    @Test
     void testUploadDocuments() throws InterruptedException {
         // Order: 1) list datasets, 2) file upload, 3) init dataset
         mockServer.enqueue(new MockResponse()

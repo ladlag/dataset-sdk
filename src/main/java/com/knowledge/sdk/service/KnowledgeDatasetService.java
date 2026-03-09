@@ -157,6 +157,43 @@ public class KnowledgeDatasetService {
     }
 
     /**
+     * Create a user's personal knowledge base using the default token.
+     * Dataset name follows the pattern: user_{userId}
+     *
+     * @param userId user identifier
+     * @return created dataset info
+     */
+    public DatasetResponse createUserDataset(String userId) {
+        return createUserDataset(userId, null, null);
+    }
+
+    /**
+     * Create a user's personal knowledge base using a user-specific token.
+     * Logs in as the specified user via SSO to get their token,
+     * so the dataset is created under that user's account (truly private).
+     * Dataset name follows the pattern: user_{userId}
+     *
+     * @param userId   user identifier
+     * @param username the user's username for SSO login
+     * @param email    the user's email for SSO login
+     * @return created dataset info
+     */
+    public DatasetResponse createUserDataset(String userId, String username, String email) {
+        String datasetName = properties.getUserDatasetPrefix() + userId;
+        return createDataset(datasetName, username, email);
+    }
+
+    /**
+     * Create the public knowledge base using the default token.
+     * Dataset name defaults to 'public_dataset' (configurable via knowledge.public-dataset-name).
+     *
+     * @return created dataset info
+     */
+    public DatasetResponse createPublicDataset() {
+        return createDataset(properties.getPublicDatasetName());
+    }
+
+    /**
      * Delete a document from a knowledge base.
      *
      * @param datasetId  ID of the knowledge base

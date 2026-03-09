@@ -144,7 +144,9 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC...（Base64 编码的公钥）
 
 ### 场景 1：创建知识库
 
-手动创建一个知识库，返回知识库信息（包含 ID 和名称）。`name` 参数可以是任意名称，SDK 不做限制。如果需要创建公共或个人知识库，建议使用 `uploadToPublicDataset` 或 `uploadToUserDataset` 方法，它们会自动按照约定命名。
+手动创建一个知识库，返回知识库信息（包含 ID 和名称）。
+
+**通用创建**：`name` 参数可以是任意名称。
 
 ```java
 import com.knowledge.sdk.model.DatasetResponse;
@@ -158,15 +160,69 @@ public class KnowledgeController {
     private KnowledgeDatasetService knowledgeDatasetService;
 
     /**
-     * 场景1：创建知识库
+     * 场景1：创建知识库（通用）
      */
     @PostMapping("/datasets")
     public DatasetResponse createDataset(@RequestParam String name) {
-        // 创建名为 name 的知识库，返回包含 id、name 等信息的 DatasetResponse
         DatasetResponse dataset = knowledgeDatasetService.createDataset(name);
         System.out.println("知识库已创建, ID: " + dataset.getId() + ", 名称: " + dataset.getName());
         return dataset;
     }
+}
+```
+
+**创建公共知识库**：名称默认 `public_dataset`（可通过 `knowledge.public-dataset-name` 修改）。
+
+```java
+/**
+ * 创建公共知识库
+ */
+@PostMapping("/datasets/public")
+public DatasetResponse createPublicDataset() {
+    // 使用默认 token 创建公共知识库，名称为 "public_dataset"
+    DatasetResponse dataset = knowledgeDatasetService.createPublicDataset();
+    return dataset;
+}
+```
+
+**创建个人知识库（默认 token）**：名称自动按 `user_{userId}` 格式生成，知识库在默认用户账户下管理。
+
+```java
+/**
+ * 创建个人知识库（默认 token）
+ *
+ * 知识库名称：user_{userId}，例如 user_alice001
+ * 知识库归属于配置文件中默认用户的账户
+ */
+@PostMapping("/users/{userId}/datasets")
+public DatasetResponse createUserDataset(@PathVariable String userId) {
+    DatasetResponse dataset = knowledgeDatasetService.createUserDataset(userId);
+    System.out.println("个人知识库已创建: " + dataset.getName());
+    return dataset;
+}
+```
+
+**创建个人知识库（用户专属 token，真正私有）**：以指定用户的身份通过 SSO 登录，用该用户的 token 创建知识库，知识库在知识库系统中归属于该用户账户。
+
+```java
+/**
+ * 创建个人知识库（用户专属 token）
+ *
+ * SDK 会以该用户的 username/email 通过 SSO 登录获取专属 token，
+ * 用该 token 创建知识库，知识库真正归属于该用户，是私有的。
+ *
+ * HTTP_USER_INFO 数据格式：{"username": "alice", "email": "alice@example.com"}
+ */
+@PostMapping("/users/{userId}/datasets/private")
+public DatasetResponse createPrivateUserDataset(@PathVariable String userId,
+                                                 @RequestParam String username,
+                                                 @RequestParam String email) {
+    // SDK 以 alice 的身份登录，获取 alice 的 token
+    // 用 alice 的 token 创建知识库 "user_alice001"，该知识库归属于 alice
+    DatasetResponse dataset = knowledgeDatasetService.createUserDataset(
+            userId, username, email);
+    System.out.println("私有知识库已创建: " + dataset.getName() + ", 归属用户: " + username);
+    return dataset;
 }
 ```
 
@@ -408,10 +464,35 @@ public class KnowledgeController {
     @Autowired
     private KnowledgeDatasetService knowledgeDatasetService;
 
-    // 场景1：创建知识库
+    // 场景1：创建知识库（通用）
     @PostMapping("/datasets")
     public ResponseEntity<DatasetResponse> createDataset(@RequestParam String name) {
         DatasetResponse dataset = knowledgeDatasetService.createDataset(name);
+        return ResponseEntity.ok(dataset);
+    }
+
+    // 场景1（扩展）：创建公共知识库
+    @PostMapping("/datasets/public")
+    public ResponseEntity<DatasetResponse> createPublicDataset() {
+        DatasetResponse dataset = knowledgeDatasetService.createPublicDataset();
+        return ResponseEntity.ok(dataset);
+    }
+
+    // 场景1（扩展）：创建个人知识库（默认 token）
+    @PostMapping("/users/{userId}/datasets")
+    public ResponseEntity<DatasetResponse> createUserDataset(@PathVariable String userId) {
+        DatasetResponse dataset = knowledgeDatasetService.createUserDataset(userId);
+        return ResponseEntity.ok(dataset);
+    }
+
+    // 场景1（扩展）：创建个人知识库（用户专属 token，真正私有）
+    @PostMapping("/users/{userId}/datasets/private")
+    public ResponseEntity<DatasetResponse> createPrivateUserDataset(
+            @PathVariable String userId,
+            @RequestParam String username,
+            @RequestParam String email) {
+        DatasetResponse dataset = knowledgeDatasetService.createUserDataset(
+                userId, username, email);
         return ResponseEntity.ok(dataset);
     }
 
