@@ -73,7 +73,11 @@ public class KnowledgeHttpClient {
 
     public DatasetResponse createDataset(String name, String username, String email) {
         String url = properties.getBaseUrl() + properties.getDatasetInitPath();
-        String body = "{\"name\":\"" + escapeJson(name) + "\"}";
+        String body = "{\"name\":\"" + escapeJson(name) + "\""
+                + ",\"indexing_technique\":\"" + escapeJson(properties.getIndexingTechnique()) + "\""
+                + ",\"embedding_model\":\"" + escapeJson(properties.getEmbeddingModel()) + "\""
+                + ",\"embedding_model_provider\":\"" + escapeJson(properties.getEmbeddingModelProvider()) + "\""
+                + "}";
 
         String responseBody = executeWithRetry("POST", url, body, username, email);
         try {

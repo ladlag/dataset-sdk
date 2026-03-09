@@ -60,7 +60,7 @@ class KnowledgeServiceTest {
     }
 
     @Test
-    void testCreateDataset() {
+    void testCreateDataset() throws InterruptedException {
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
@@ -71,6 +71,12 @@ class KnowledgeServiceTest {
         assertNotNull(response);
         assertEquals("dataset-123", response.getId());
         assertEquals("test-dataset", response.getName());
+
+        // Verify request body includes indexing_technique
+        RecordedRequest request = mockServer.takeRequest();
+        String body = request.getBody().readUtf8();
+        assertTrue(body.contains("\"indexing_technique\":\"high_quality\""),
+                "Request body should include indexing_technique");
     }
 
     @Test
