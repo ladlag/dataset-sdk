@@ -34,7 +34,7 @@ mvn clean install
 
 ### 2. 添加配置
 
-在 `application.yml` 或 `application.properties` 中配置。SDK 提供了完整的示例配置文件 `src/main/resources/application-example.yml`，可以直接复制到你的项目中使用。
+在 `application.yml` 或 `application.properties` 中配置。SDK 源码中提供了完整的示例配置文件 [`application-example.yml`](src/main/resources/application-example.yml)，你可以将其中的 `knowledge:` 部分复制到你项目的 `application.yml` 中，然后根据实际情况修改。
 
 ```yaml
 knowledge:
