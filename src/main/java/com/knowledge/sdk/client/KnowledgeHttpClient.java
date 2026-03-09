@@ -73,10 +73,8 @@ public class KnowledgeHttpClient {
 
     public DatasetResponse createDataset(String name, String username, String email) {
         String url = properties.getBaseUrl() + properties.getDatasetInitPath();
-        String body = "{\"name\":\"" + escapeJson(name) + "\""
-                + ",\"indexing_technique\":\"" + escapeJson(properties.getIndexingTechnique()) + "\""
-                + ",\"embedding_model\":\"" + escapeJson(properties.getEmbeddingModel()) + "\""
-                + ",\"embedding_model_provider\":\"" + escapeJson(properties.getEmbeddingModelProvider()) + "\""
+        String body = "{\"name\":\"" + escapeJson(name) + "\","
+                + buildConfigFields()
                 + "}";
 
         String responseBody = executeWithRetry("POST", url, body, username, email);
@@ -357,7 +355,11 @@ public class KnowledgeHttpClient {
         return "\"data_source\":{\"type\":\"upload_file\","
                 + "\"info_list\":{\"data_source_type\":\"upload_file\","
                 + "\"file_info_list\":{\"file_ids\":" + fileIdsJson + "}}},"
-                + "\"indexing_technique\":\"" + escapeJson(properties.getIndexingTechnique()) + "\","
+                + buildConfigFields();
+    }
+
+    private String buildConfigFields() {
+        return "\"indexing_technique\":\"" + escapeJson(properties.getIndexingTechnique()) + "\","
                 + "\"process_rule\":{\"rules\":{"
                 + "\"pre_processing_rules\":["
                 + "{\"id\":\"remove_extra_spaces\",\"enabled\":true},"

@@ -72,7 +72,7 @@ class KnowledgeServiceTest {
         assertEquals("dataset-123", response.getId());
         assertEquals("test-dataset", response.getName());
 
-        // Verify request body includes indexing_technique
+        // Verify request body includes all config fields
         RecordedRequest request = mockServer.takeRequest();
         String body = request.getBody().readUtf8();
         assertTrue(body.contains("\"indexing_technique\":\"high_quality\""),
@@ -81,6 +81,14 @@ class KnowledgeServiceTest {
                 "Request body should include embedding_model");
         assertTrue(body.contains("\"embedding_model_provider\":\"langgenius/tongyi/tongyi\""),
                 "Request body should include embedding_model_provider");
+        assertTrue(body.contains("\"process_rule\""),
+                "Request body should include process_rule");
+        assertTrue(body.contains("\"doc_form\":\"text_model\""),
+                "Request body should include doc_form");
+        assertTrue(body.contains("\"doc_language\":\"English\""),
+                "Request body should include doc_language");
+        assertTrue(body.contains("\"retrieval_model\""),
+                "Request body should include retrieval_model");
     }
 
     @Test
