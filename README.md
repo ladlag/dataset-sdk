@@ -34,14 +34,14 @@ mvn clean install
 
 ### 2. 添加配置
 
-在 `application.yml` 或 `application.properties` 中配置：
+在 `application.yml` 或 `application.properties` 中配置。SDK 提供了完整的示例配置文件 `src/main/resources/application-example.yml`，可以直接复制到你的项目中使用。
 
 ```yaml
 knowledge:
   base-url: https://your-knowledge-system-host:port
-  system-token: your-system-token
-  username: admin                    # SSO 登录用户名
-  email: admin@example.com           # SSO 登录邮箱
+  system-token: your-system-token    # 系统级 Token，用于 SSO 登录请求的 Authorization 头
+  username: admin                    # SSO 登录默认用户名
+  email: admin@example.com           # SSO 登录默认邮箱
   # 可选配置（以下为默认值）
   token-expiry-buffer-seconds: 300
   connect-timeout-seconds: 30
@@ -89,7 +89,9 @@ knowledge:
   embedding-model-provider: langgenius/tongyi/tongyi   # 嵌入模型提供商
 ```
 
-> **说明**：`username` 和 `email` 用于 SSO 登录，SDK 会将其构建为 `{"username":"...","email":"..."}` JSON 格式，经 RSA 加密后作为 `HTTP_USER_INFO` 发送。
+> **说明**：
+> - `system-token`：系统级授权令牌，SDK 在调用 SSO 登录接口时作为 `Authorization: Bearer {systemToken}` 发送。该 token 由知识库系统管理员提供，用于验证 SDK 的调用权限。它**不是**用户的 access_token，而是一个固定的系统凭证。
+> - `username` 和 `email`：默认 SSO 登录用户信息。SDK 会将其构建为 `{"username":"...","email":"..."}` JSON 格式，经 RSA 加密后作为 `HTTP_USER_INFO` 发送到 SSO 接口，换取该用户的 `access_token`。
 
 ### 3. 注入 SDK 服务
 
@@ -142,7 +144,7 @@ MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC...（Base64 编码的公钥）
 
 ### 场景 1：创建知识库
 
-手动创建一个知识库，返回知识库信息（包含 ID 和名称）。
+手动创建一个知识库，返回知识库信息（包含 ID 和名称）。`name` 参数可以是任意名称，SDK 不做限制。如果需要创建公共或个人知识库，建议使用 `uploadToPublicDataset` 或 `uploadToUserDataset` 方法，它们会自动按照约定命名。
 
 ```java
 import com.knowledge.sdk.model.DatasetResponse;
@@ -236,7 +238,15 @@ public List<String> uploadProductDocs(@RequestParam("files") List<MultipartFile>
 
 上传文档到用户个人知识库，知识库名称自动按 `user_{userId}` 规则命名。如果用户的知识库不存在，SDK 自动创建。
 
-**方式一：使用默认 token（知识库在默认用户下）**
+> **知识库命名规则**：
+> - 公共知识库：名称固定为 `public_dataset`（可通过 `knowledge.public-dataset-name` 修改）
+> - 个人知识库：名称为 `user_{userId}`，如 `user_alice001`（前缀可通过 `knowledge.user-dataset-prefix` 修改）
+>
+> **知识库归属说明**：
+> - **方式一（默认 token）**：使用配置文件中 `username/email` 的 token 创建知识库。知识库在知识库系统中归属于该默认用户，`user_{userId}` 只是命名约定用于区分不同用户的数据。所有个人知识库实际上都在同一个默认账户下管理。
+> - **方式二（用户专属 token）**：以指定用户的 `username/email` 通过 SSO 登录获取专属 token，用该 token 创建的知识库在知识库系统中归属于该用户账户。这样每个用户的知识库是真正私有的，仅该用户可管理。
+
+**方式一：使用默认 token（知识库在默认用户账户下，按命名区分）**
 
 ```java
 /**
@@ -250,7 +260,7 @@ public List<String> uploadToUserDataset(@PathVariable String userId,
 }
 ```
 
-**方式二：使用用户专属 token（知识库在该用户账户下）**
+**方式二：使用用户专属 token（知识库归属该用户账户，真正私有）**
 
 不同用户登录后拿到不同的 token，传不同的 token 创建知识库时，知识库会归属于对应用户。
 
@@ -518,8 +528,7 @@ com.knowledge.sdk
 │   ├── DatasetResponse.java       # 知识库响应
 │   ├── DatasetListResponse.java   # 知识库列表响应
 │   ├── DocumentResponse.java      # 文档响应
-│   ├── FileUploadResponse.java    # 文件上传响应
-│   └── SsoLoginResponse.java      # SSO 登录响应
+│   └── FileUploadResponse.java    # 文件上传响应
 └── service/
     └── KnowledgeDatasetService.java  # 核心服务（业务入口）
 ```
