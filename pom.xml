@@ -14,7 +14,7 @@
 
     <groupId>com.knowledge</groupId>
     <artifactId>knowledge-sdk</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>Knowledge SDK</name>
     <description>Spring Boot Knowledge SDK</description>
 
