@@ -72,7 +72,7 @@ public class KnowledgeHttpClient {
     // ===== Per-user methods (using user-specific token) =====
 
     public DatasetResponse createDataset(String name, String username, String email) {
-        String url = properties.getBaseUrl() + properties.getDatasetInitPath();
+        String url = properties.getBaseUrl() + properties.getDatasetCreatePath();
         String body = "{\"name\":\"" + escapeJson(name) + "\","
                 + buildConfigFields()
                 + "}";

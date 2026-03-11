@@ -55,7 +55,8 @@ knowledge:
   # API 路径配置（以下为默认值）
   sso-login-path: /tenant/api/app/account/sso_login  # SSO 登录接口路径
   token-ttl-seconds: 3600                             # Token 有效期（秒）
-  dataset-init-path: /console/api/datasets/init       # 创建/初始化知识库接口路径
+  dataset-init-path: /console/api/datasets/init       # 初始化知识库并创建文档接口路径（需要 data_source）
+  dataset-create-path: /console/api/datasets           # 创建知识库接口路径（不需要 data_source）
   file-upload-path: /console/api/files/upload         # 文件上传接口路径
   dataset-list-path: /console/api/datasets            # 知识库列表接口路径
   dataset-by-id-path: /console/api/datasets/{datasetId}  # 单个知识库操作路径
