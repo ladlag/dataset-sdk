@@ -72,13 +72,17 @@ class KnowledgeServiceTest {
         assertEquals("dataset-123", response.getId());
         assertEquals("test-dataset", response.getName());
 
-        // Verify request uses the dataset create endpoint (not init)
+        // Verify request uses the dataset init endpoint
         RecordedRequest request = mockServer.takeRequest();
-        assertEquals("/console/api/datasets", request.getPath(),
-                "createDataset should POST to /console/api/datasets, not /console/api/datasets/init");
+        assertEquals("/console/api/datasets/init", request.getPath(),
+                "createDataset should POST to /console/api/datasets/init");
 
-        // Verify request body includes all config fields but NOT data_source
+        // Verify request body includes data_source and all config fields
         String body = request.getBody().readUtf8();
+        assertTrue(body.contains("\"data_source\""),
+                "Request body should include data_source");
+        assertTrue(body.contains("\"file_ids\":[]"),
+                "data_source should have empty file_ids for dataset creation without documents");
         assertTrue(body.contains("\"indexing_technique\":\"high_quality\""),
                 "Request body should include indexing_technique");
         assertTrue(body.contains("\"embedding_model\":\"text-embedding-v2\""),
@@ -93,8 +97,6 @@ class KnowledgeServiceTest {
                 "Request body should include doc_language");
         assertTrue(body.contains("\"retrieval_model\""),
                 "Request body should include retrieval_model");
-        assertFalse(body.contains("\"data_source\""),
-                "createDataset should NOT include data_source (only needed for init with documents)");
     }
 
     @Test
@@ -128,7 +130,7 @@ class KnowledgeServiceTest {
         // Verify request was made to the correct path with correct dataset name
         RecordedRequest request = mockServer.takeRequest();
         assertEquals("POST", request.getMethod());
-        assertEquals("/console/api/datasets", request.getPath());
+        assertEquals("/console/api/datasets/init", request.getPath());
         assertTrue(request.getBody().readUtf8().contains("user_bob002"));
     }
 
@@ -425,7 +427,6 @@ class KnowledgeServiceTest {
     void testApiPathDefaults() {
         assertEquals("/tenant/api/app/account/sso_login", properties.getSsoLoginPath());
         assertEquals("/console/api/datasets/init", properties.getDatasetInitPath());
-        assertEquals("/console/api/datasets", properties.getDatasetCreatePath());
         assertEquals("/console/api/files/upload", properties.getFileUploadPath());
         assertEquals("/console/api/datasets", properties.getDatasetListPath());
         assertEquals("/console/api/datasets/{datasetId}", properties.getDatasetByIdPath());
@@ -439,7 +440,6 @@ class KnowledgeServiceTest {
         KnowledgeProperties customProperties = new KnowledgeProperties();
         customProperties.setSsoLoginPath("/custom/sso/login");
         customProperties.setDatasetInitPath("/api/v2/datasets/init");
-        customProperties.setDatasetCreatePath("/api/v2/datasets");
         customProperties.setFileUploadPath("/api/v2/files/upload");
         customProperties.setDatasetListPath("/api/v2/datasets");
         customProperties.setDatasetByIdPath("/api/v2/datasets/{datasetId}");
@@ -449,7 +449,6 @@ class KnowledgeServiceTest {
 
         assertEquals("/custom/sso/login", customProperties.getSsoLoginPath());
         assertEquals("/api/v2/datasets/init", customProperties.getDatasetInitPath());
-        assertEquals("/api/v2/datasets", customProperties.getDatasetCreatePath());
         assertEquals("/api/v2/files/upload", customProperties.getFileUploadPath());
         assertEquals("/api/v2/datasets", customProperties.getDatasetListPath());
         assertEquals("/api/v2/datasets/{datasetId}", customProperties.getDatasetByIdPath());
@@ -553,7 +552,7 @@ class KnowledgeServiceTest {
     @Test
     void testCustomEndpointPathsUsedInRequests() throws InterruptedException {
         // Verify that custom endpoint paths are used in actual HTTP requests
-        properties.setDatasetCreatePath("/custom/api/v2/datasets");
+        properties.setDatasetInitPath("/custom/api/v2/datasets/init");
 
         ObjectMapper objectMapper = new ObjectMapper();
         TokenManager tokenManager = new MockTokenManager(properties);
@@ -573,7 +572,7 @@ class KnowledgeServiceTest {
         assertEquals("dataset-custom", response.getId());
 
         RecordedRequest request = mockServer.takeRequest();
-        assertTrue(request.getPath().startsWith("/custom/api/v2/datasets"),
+        assertTrue(request.getPath().startsWith("/custom/api/v2/datasets/init"),
                 "Expected custom endpoint path but got: " + request.getPath());
     }
 
