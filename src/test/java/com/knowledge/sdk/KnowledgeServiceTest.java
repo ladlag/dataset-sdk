@@ -941,7 +941,7 @@ class KnowledgeServiceTest {
         TokenManager realTokenManager = new TokenManager(props, new OkHttpClient(), new ObjectMapper());
 
         KnowledgeException ex = assertThrows(KnowledgeException.class, () -> realTokenManager.refreshToken());
-        assertTrue(ex.getMessage().contains("email"),
+        assertTrue(ex.getMessage().contains("email must not be null or empty"),
                 "Error message should mention email is required, but was: " + ex.getMessage());
     }
 
@@ -954,7 +954,7 @@ class KnowledgeServiceTest {
         TokenManager realTokenManager = new TokenManager(props, new OkHttpClient(), new ObjectMapper());
 
         KnowledgeException ex = assertThrows(KnowledgeException.class, () -> realTokenManager.refreshToken());
-        assertTrue(ex.getMessage().contains("email"),
+        assertTrue(ex.getMessage().contains("email must not be null or empty"),
                 "Error message should mention email is required, but was: " + ex.getMessage());
     }
 
@@ -967,7 +967,7 @@ class KnowledgeServiceTest {
         TokenManager realTokenManager = new TokenManager(props, new OkHttpClient(), new ObjectMapper());
 
         KnowledgeException ex = assertThrows(KnowledgeException.class, () -> realTokenManager.refreshToken());
-        assertTrue(ex.getMessage().contains("username"),
+        assertTrue(ex.getMessage().contains("username must not be null or empty"),
                 "Error message should mention username is required, but was: " + ex.getMessage());
     }
 
