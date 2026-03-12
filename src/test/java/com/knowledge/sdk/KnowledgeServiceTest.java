@@ -167,9 +167,7 @@ class KnowledgeServiceTest {
 
     @Test
     void testCreateUserDatasetUsesPerUserToken() throws InterruptedException {
-        // When creating a dataset with user credentials, the per-user token should be used
-        // for dataset creation, but the init file upload uses the default token (shared)
-        // Init file upload (uses default token)
+        // Init file upload uses default token (shared); dataset creation uses per-user token
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
