@@ -301,7 +301,8 @@ public class KnowledgeHttpClient {
         }
         if (username != null || email != null) {
             log.warn("Only one of username/email provided (username={}, email={}), "
-                    + "both are required for per-user token. Falling back to default token.", username, email);
+                    + "both are required for per-user token. Falling back to default token. "
+                    + "Check that the calling method passes both username AND email.", username, email);
         }
         log.debug("Resolving token for default user");
         return tokenManager.getToken();

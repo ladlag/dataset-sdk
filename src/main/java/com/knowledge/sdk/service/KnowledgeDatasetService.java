@@ -146,7 +146,11 @@ public class KnowledgeDatasetService {
      * @return created dataset info
      */
     public DatasetResponse createDataset(String name, String username, String email) {
-        log.info("Creating dataset: {}", name);
+        if (username != null && email != null) {
+            log.info("Creating dataset '{}' with per-user token (username={})", name, username);
+        } else {
+            log.info("Creating dataset '{}' with default token", name);
+        }
         DatasetResponse response = httpClient.createDataset(name, username, email);
         return response;
     }
@@ -174,6 +178,10 @@ public class KnowledgeDatasetService {
      * @return created dataset info
      */
     public DatasetResponse createUserDataset(String userId, String username, String email) {
+        if (username == null || email == null) {
+            log.warn("createUserDataset called with username={}, email={} — "
+                    + "both must be non-null for per-user token, will use default token", username, email);
+        }
         String datasetName = properties.getUserDatasetPrefix() + userId;
         return createDataset(datasetName, username, email);
     }
