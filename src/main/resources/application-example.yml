@@ -62,7 +62,12 @@ knowledge:
   # SSO 登录接口路径
   sso-login-path: /tenant/api/app/account/sso_login
 
-  # 创建/初始化知识库接口路径（所有 createDataset / initDatasetWithDocuments 调用都用此路径）
+  # 创建知识库接口路径（仅创建知识库，不包含文档）
+  # POST 请求，请求体只需 name、indexing_technique、embedding_model、embedding_model_provider
+  dataset-create-path: /console/api/datasets
+
+  # 创建知识库并同时创建文档接口路径（需要 data_source 字段）
+  # 用于 uploadDocuments 自动创建知识库时调用
   dataset-init-path: /console/api/datasets/init
 
   # 文件上传接口路径（SDK 会自动追加 ?source=datasets）
@@ -132,9 +137,9 @@ knowledge:
   # ------------------------------------------------------------------
   # [可选] 初始化文件配置
   # ------------------------------------------------------------------
-  # 创建知识库时，API 要求 data_source.file_ids 不能为空。
-  # SDK 会自动上传一个占位文件（init 文件）来满足此要求。
-  # 以下配置控制该占位文件的文件名和内容。
+  # 使用 uploadDocuments 上传文档时，如果知识库不存在，SDK 会通过
+  # /datasets/init 接口自动创建知识库并上传文档。
+  # 以下配置控制在 initDatasetWithDocuments 场景下使用的占位文件属性。
 
   init-file-name: init.txt                          # 初始化占位文件名
   init-file-content: Knowledge Base Initialization File  # 初始化占位文件内容

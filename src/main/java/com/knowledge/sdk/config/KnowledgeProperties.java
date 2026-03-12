@@ -86,7 +86,13 @@ public class KnowledgeProperties {
     private long tokenTtlSeconds = 3600;
 
     /**
-     * Full path for dataset init endpoint (create dataset, optionally with documents).
+     * Full path for creating a dataset (without documents).
+     * Appended to baseUrl. Does NOT require data_source.
+     */
+    private String datasetCreatePath = "/console/api/datasets";
+
+    /**
+     * Full path for dataset init endpoint (create dataset with documents).
      * Appended to baseUrl. Requires data_source in request body.
      */
     private String datasetInitPath = "/console/api/datasets/init";
@@ -387,6 +393,14 @@ public class KnowledgeProperties {
 
     public void setTokenTtlSeconds(long tokenTtlSeconds) {
         this.tokenTtlSeconds = tokenTtlSeconds;
+    }
+
+    public String getDatasetCreatePath() {
+        return datasetCreatePath;
+    }
+
+    public void setDatasetCreatePath(String datasetCreatePath) {
+        this.datasetCreatePath = datasetCreatePath;
     }
 
     public String getDatasetInitPath() {
