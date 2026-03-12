@@ -247,6 +247,19 @@ public class KnowledgeProperties {
      */
     private String embeddingModelProvider = "langgenius/tongyi/tongyi";
 
+    /**
+     * File name used for the placeholder/init file uploaded when creating a dataset.
+     * The API requires at least one file_id in data_source, so the SDK auto-uploads
+     * this small text file before creating the dataset.
+     */
+    private String initFileName = "init.txt";
+
+    /**
+     * Content of the placeholder/init file uploaded when creating a dataset.
+     * Should be a small, generic text suitable as an initial document.
+     */
+    private String initFileContent = "Knowledge Base Initialization File";
+
     public String getBaseUrl() {
         return baseUrl;
     }
@@ -605,5 +618,21 @@ public class KnowledgeProperties {
 
     public void setEmbeddingModelProvider(String embeddingModelProvider) {
         this.embeddingModelProvider = embeddingModelProvider;
+    }
+
+    public String getInitFileName() {
+        return initFileName;
+    }
+
+    public void setInitFileName(String initFileName) {
+        this.initFileName = initFileName;
+    }
+
+    public String getInitFileContent() {
+        return initFileContent;
+    }
+
+    public void setInitFileContent(String initFileContent) {
+        this.initFileContent = initFileContent;
     }
 }

@@ -14,8 +14,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class KnowledgeHttpClient {
 
@@ -26,6 +28,13 @@ public class KnowledgeHttpClient {
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final TokenManager tokenManager;
+
+    /**
+     * Cache of uploaded init file IDs. Key is "default" for the default user,
+     * or "username|email" for per-user uploads. Value is the uploaded file ID.
+     * This avoids re-uploading the same placeholder file for repeated dataset creations.
+     */
+    private final ConcurrentHashMap<String, String> initFileIdCache = new ConcurrentHashMap<>();
 
     public KnowledgeHttpClient(KnowledgeProperties properties, TokenManager tokenManager,
                                ObjectMapper objectMapper, OkHttpClient httpClient) {
@@ -72,11 +81,13 @@ public class KnowledgeHttpClient {
     // ===== Per-user methods (using user-specific token) =====
 
     public DatasetResponse createDataset(String name, String username, String email) {
+        String initFileId = getOrUploadInitFile(username, email);
+
         String url = properties.getBaseUrl() + properties.getDatasetInitPath();
         String body = "{\"name\":\"" + escapeJson(name) + "\","
                 + "\"data_source\":{\"type\":\"upload_file\","
                 + "\"info_list\":{\"data_source_type\":\"upload_file\","
-                + "\"file_info_list\":{\"file_ids\":[]}}},"
+                + "\"file_info_list\":{\"file_ids\":[\"" + escapeJson(initFileId) + "\"]}}},"
                 + buildConfigFields()
                 + "}";
 
@@ -87,6 +98,61 @@ public class KnowledgeHttpClient {
             return objectMapper.treeToValue(datasetNode, DatasetResponse.class);
         } catch (Exception e) {
             throw new KnowledgeException("Failed to parse create dataset response", e);
+        }
+    }
+
+    /**
+     * Get a cached init file ID or upload a new placeholder file.
+     * The init file is a small text file used to satisfy the API requirement
+     * that data_source.file_ids must not be empty when creating a dataset.
+     *
+     * @param username the user's username (null for default token)
+     * @param email    the user's email (null for default token)
+     * @return the uploaded file ID
+     */
+    private String getOrUploadInitFile(String username, String email) {
+        String cacheKey = (username != null && email != null)
+                ? username + "|" + email : "default";
+
+        String cachedId = initFileIdCache.get(cacheKey);
+        if (cachedId != null) {
+            log.debug("Using cached init file ID '{}' for key '{}'", cachedId, cacheKey);
+            return cachedId;
+        }
+
+        log.info("Uploading init file for dataset creation (key={})", cacheKey);
+        String fileId = uploadInitFile(username, email);
+        initFileIdCache.put(cacheKey, fileId);
+        return fileId;
+    }
+
+    /**
+     * Upload a small placeholder text file to satisfy the API requirement
+     * that file_ids must not be empty when creating a dataset.
+     *
+     * @param username the user's username (null for default token)
+     * @param email    the user's email (null for default token)
+     * @return the uploaded file ID
+     */
+    private String uploadInitFile(String username, String email) {
+        String url = properties.getBaseUrl() + properties.getFileUploadPath() + "?source=datasets";
+        String fileName = properties.getInitFileName();
+        byte[] content = properties.getInitFileContent().getBytes(StandardCharsets.UTF_8);
+
+        RequestBody fileBody = RequestBody.create(content, MediaType.parse("text/plain"));
+        MultipartBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("file", fileName, fileBody)
+                .build();
+
+        try {
+            String responseStr = executeMultipartWithRetry(url, requestBody, username, email);
+            FileUploadResponse uploadResponse = objectMapper.readValue(responseStr, FileUploadResponse.class);
+            String fileId = uploadResponse.getId();
+            log.info("Init file uploaded successfully: id={}, name={}", fileId, fileName);
+            return fileId;
+        } catch (Exception e) {
+            throw new KnowledgeException("Failed to upload init file for dataset creation", e);
         }
     }
 
