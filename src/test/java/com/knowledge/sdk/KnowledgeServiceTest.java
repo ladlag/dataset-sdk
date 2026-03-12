@@ -64,11 +64,18 @@ class KnowledgeServiceTest {
 
     @Test
     void testCreateDataset() throws InterruptedException {
-        // createDataset POSTs to /console/api/datasets (no init file, no data_source)
+        // createDataset now POSTs to /console/api/datasets/init with init file
+        // Step 1: init file upload
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"dataset-123\",\"name\":\"test-dataset\"}"));
+                .setBody("{\"id\":\"init-file-001\",\"name\":\"init.txt\"}"));
+
+        // Step 2: dataset creation via /console/api/datasets/init
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"dataset\":{\"id\":\"dataset-123\",\"name\":\"test-dataset\"},\"batch\":\"batch-001\"}"));
 
         DatasetResponse response = knowledgeDatasetService.createDataset("test-dataset");
 
@@ -76,33 +83,45 @@ class KnowledgeServiceTest {
         assertEquals("dataset-123", response.getId());
         assertEquals("test-dataset", response.getName());
 
+        // Verify init file upload request
+        RecordedRequest uploadRequest = mockServer.takeRequest();
+        assertEquals("POST", uploadRequest.getMethod());
+        assertTrue(uploadRequest.getPath().contains("/console/api/files/upload"),
+                "Should upload init file first");
+
         // Verify dataset creation request
         RecordedRequest createRequest = mockServer.takeRequest();
         assertEquals("POST", createRequest.getMethod());
-        assertEquals("/console/api/datasets", createRequest.getPath(),
-                "createDataset should POST to /console/api/datasets");
+        assertEquals("/console/api/datasets/init", createRequest.getPath(),
+                "createDataset should POST to /console/api/datasets/init");
 
-        // Verify request body includes required fields but NOT data_source
+        // Verify request body includes required fields
         String body = createRequest.getBody().readUtf8();
         assertTrue(body.contains("\"name\":\"test-dataset\""),
                 "Request body should include name");
+        assertTrue(body.contains("\"data_source\""),
+                "Request body should include data_source");
         assertTrue(body.contains("\"indexing_technique\":\"high_quality\""),
                 "Request body should include indexing_technique");
         assertTrue(body.contains("\"embedding_model\":\"text-embedding-v2\""),
                 "Request body should include embedding_model");
         assertTrue(body.contains("\"embedding_model_provider\":\"langgenius/tongyi/tongyi\""),
                 "Request body should include embedding_model_provider");
-        assertFalse(body.contains("\"data_source\""),
-                "Request body should NOT include data_source");
     }
 
     @Test
-    void testCreateUserDatasetWithDefaultToken() {
-        // createDataset only needs one response (no init file upload)
+    void testCreateUserDatasetWithDefaultToken() throws InterruptedException {
+        // Init file upload
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"ds-user-alice\",\"name\":\"user_alice001\"}"));
+                .setBody("{\"id\":\"init-file-user\",\"name\":\"init.txt\"}"));
+
+        // Dataset creation via /console/api/datasets/init
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"dataset\":{\"id\":\"ds-user-alice\",\"name\":\"user_alice001\"}}"));
 
         DatasetResponse response = knowledgeDatasetService.createUserDataset("alice001");
 
@@ -113,11 +132,17 @@ class KnowledgeServiceTest {
 
     @Test
     void testCreateUserDatasetWithUserCredentials() throws InterruptedException {
-        // createDataset only needs one response (no init file upload)
+        // Init file upload (per-user)
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"ds-user-bob\",\"name\":\"user_bob002\"}"));
+                .setBody("{\"id\":\"init-file-bob\",\"name\":\"init.txt\"}"));
+
+        // Dataset creation via /console/api/datasets/init
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"dataset\":{\"id\":\"ds-user-bob\",\"name\":\"user_bob002\"}}"));
 
         DatasetResponse response = knowledgeDatasetService.createUserDataset(
                 "bob002", "bob", "bob@example.com");
@@ -126,29 +151,43 @@ class KnowledgeServiceTest {
         assertEquals("ds-user-bob", response.getId());
         assertEquals("user_bob002", response.getName());
 
+        // Verify init file upload request
+        RecordedRequest uploadRequest = mockServer.takeRequest();
+        assertEquals("POST", uploadRequest.getMethod());
+
         // Verify dataset creation request
-        RecordedRequest request = mockServer.takeRequest();
-        assertEquals("POST", request.getMethod());
-        assertEquals("/console/api/datasets", request.getPath());
-        String body = request.getBody().readUtf8();
+        RecordedRequest createRequest = mockServer.takeRequest();
+        assertEquals("POST", createRequest.getMethod());
+        assertEquals("/console/api/datasets/init", createRequest.getPath());
+        String body = createRequest.getBody().readUtf8();
         assertTrue(body.contains("user_bob002"));
-        assertFalse(body.contains("\"data_source\""),
-                "Request body should NOT include data_source");
+        assertTrue(body.contains("\"data_source\""),
+                "Request body should include data_source");
     }
 
     @Test
     void testCreateUserDatasetUsesPerUserToken() throws InterruptedException {
         // When creating a dataset with user credentials, the per-user token should be used
+        // Init file upload
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"ds-user-token\",\"name\":\"user_charlie003\"}"));
+                .setBody("{\"id\":\"init-file-charlie\",\"name\":\"init.txt\"}"));
+
+        // Dataset creation
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"dataset\":{\"id\":\"ds-user-token\",\"name\":\"user_charlie003\"}}"));
 
         DatasetResponse response = knowledgeDatasetService.createUserDataset(
                 "charlie003", "charlie", "charlie@example.com");
 
         assertNotNull(response);
         assertEquals("ds-user-token", response.getId());
+
+        // Skip init file upload request
+        mockServer.takeRequest();
 
         // Verify the per-user token was used for dataset creation
         RecordedRequest createRequest = mockServer.takeRequest();
@@ -160,16 +199,26 @@ class KnowledgeServiceTest {
     @Test
     void testCreateDatasetWithPartialCredentialsFallsBackToDefault() throws InterruptedException {
         // When only username is provided (email is null), should fall back to default token
+        // Init file upload (uses default token because partial credentials)
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"ds-partial\",\"name\":\"partial_dataset\"}"));
+                .setBody("{\"id\":\"init-file-partial\",\"name\":\"init.txt\"}"));
+
+        // Dataset creation
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"dataset\":{\"id\":\"ds-partial\",\"name\":\"partial_dataset\"}}"));
 
         // Call createDataset directly with only username (null email)
         DatasetResponse response = knowledgeDatasetService.createDataset("partial_dataset", "someuser", null);
 
         assertNotNull(response);
         assertEquals("ds-partial", response.getId());
+
+        // Skip init file upload request
+        mockServer.takeRequest();
 
         // Verify the default token was used for dataset creation
         RecordedRequest createRequest = mockServer.takeRequest();
@@ -179,11 +228,18 @@ class KnowledgeServiceTest {
     }
 
     @Test
-    void testCreatePublicDataset() {
+    void testCreatePublicDataset() throws InterruptedException {
+        // Init file upload
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"ds-public\",\"name\":\"public_dataset\"}"));
+                .setBody("{\"id\":\"init-file-public\",\"name\":\"init.txt\"}"));
+
+        // Dataset creation
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"dataset\":{\"id\":\"ds-public\",\"name\":\"public_dataset\"}}"));
 
         DatasetResponse response = knowledgeDatasetService.createPublicDataset();
 
@@ -467,16 +523,25 @@ class KnowledgeServiceTest {
         // Change prefix from default "user_" to "kb_"
         properties.setUserDatasetPrefix("kb_");
         try {
-            // createDataset only needs one response (no init file upload)
+            // Init file upload
             mockServer.enqueue(new MockResponse()
                     .setResponseCode(200)
                     .setHeader("Content-Type", "application/json")
-                    .setBody("{\"id\":\"ds-kb-alice\",\"name\":\"kb_alice001\"}"));
+                    .setBody("{\"id\":\"init-file-kb\",\"name\":\"init.txt\"}"));
+
+            // Dataset creation
+            mockServer.enqueue(new MockResponse()
+                    .setResponseCode(200)
+                    .setHeader("Content-Type", "application/json")
+                    .setBody("{\"dataset\":{\"id\":\"ds-kb-alice\",\"name\":\"kb_alice001\"}}"));
 
             DatasetResponse response = knowledgeDatasetService.createUserDataset("alice001");
 
             assertNotNull(response);
             assertEquals("ds-kb-alice", response.getId());
+
+            // Skip init file upload request
+            mockServer.takeRequest();
 
             // Verify the request body uses the custom prefix
             RecordedRequest request = mockServer.takeRequest();
@@ -650,7 +715,7 @@ class KnowledgeServiceTest {
     @Test
     void testCustomEndpointPathsUsedInRequests() throws InterruptedException {
         // Verify that custom endpoint paths are used in actual HTTP requests
-        properties.setDatasetCreatePath("/custom/api/v2/datasets");
+        properties.setDatasetInitPath("/custom/api/v2/datasets/init");
 
         ObjectMapper objectMapper = new ObjectMapper();
         TokenManager tokenManager = new MockTokenManager(properties);
@@ -659,19 +724,28 @@ class KnowledgeServiceTest {
                 properties, tokenManager, objectMapper, okHttpClient, new InMemoryInitFileIdCache());
         KnowledgeDatasetService customService = new KnowledgeDatasetService(httpClient, properties);
 
-        // Only dataset creation response needed (no init file upload)
+        // Init file upload
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"dataset-custom\",\"name\":\"custom-test\"}"));
+                .setBody("{\"id\":\"init-file-custom\",\"name\":\"init.txt\"}"));
+
+        // Dataset creation via custom init path
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"dataset\":{\"id\":\"dataset-custom\",\"name\":\"custom-test\"}}"));
 
         DatasetResponse response = customService.createDataset("custom-test");
 
         assertNotNull(response);
         assertEquals("dataset-custom", response.getId());
 
+        // Skip init file upload request
+        mockServer.takeRequest();
+
         RecordedRequest request = mockServer.takeRequest();
-        assertTrue(request.getPath().startsWith("/custom/api/v2/datasets"),
+        assertTrue(request.getPath().startsWith("/custom/api/v2/datasets/init"),
                 "Expected custom endpoint path but got: " + request.getPath());
     }
 
@@ -755,17 +829,23 @@ class KnowledgeServiceTest {
     }
 
     @Test
-    void testMultipleCreateDatasetCallsDoNotUploadFiles() throws InterruptedException {
-        // createDataset should not upload any files - just POST to /console/api/datasets
+    void testMultipleCreateDatasetCallsCacheInitFile() throws InterruptedException {
+        // createDataset uploads init file once, then reuses cached init file ID
+        // First call: init file upload + dataset creation
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"ds-first\",\"name\":\"first_dataset\"}"));
+                .setBody("{\"id\":\"init-file-shared\",\"name\":\"init.txt\"}"));
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"dataset\":{\"id\":\"ds-first\",\"name\":\"first_dataset\"}}"));
 
+        // Second call: no init file upload (cached), just dataset creation
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"ds-second\",\"name\":\"second_dataset\"}"));
+                .setBody("{\"dataset\":{\"id\":\"ds-second\",\"name\":\"second_dataset\"}}"));
 
         DatasetResponse first = knowledgeDatasetService.createDataset("first_dataset");
         assertEquals("ds-first", first.getId());
@@ -773,30 +853,42 @@ class KnowledgeServiceTest {
         DatasetResponse second = knowledgeDatasetService.createDataset("second_dataset");
         assertEquals("ds-second", second.getId());
 
-        // Verify only 2 requests were made (no file uploads)
-        assertEquals(2, mockServer.getRequestCount(),
-                "createDataset should not upload any init files");
+        // Verify 3 requests: 1 init file upload + 2 dataset creation
+        assertEquals(3, mockServer.getRequestCount(),
+                "Second createDataset should reuse cached init file ID");
 
         RecordedRequest req1 = mockServer.takeRequest();
-        assertEquals("/console/api/datasets", req1.getPath());
+        assertTrue(req1.getPath().contains("/console/api/files/upload"),
+                "First request should be init file upload");
 
         RecordedRequest req2 = mockServer.takeRequest();
-        assertEquals("/console/api/datasets", req2.getPath());
+        assertEquals("/console/api/datasets/init", req2.getPath());
+
+        RecordedRequest req3 = mockServer.takeRequest();
+        assertEquals("/console/api/datasets/init", req3.getPath());
     }
 
     @Test
-    void testCreateDatasetWithDifferentUsersNoFileUpload() throws InterruptedException {
-        // Create dataset for user A
+    void testCreateDatasetWithDifferentUsersUploadsInitFileSeparately() throws InterruptedException {
+        // Create dataset for user A: init file upload + dataset creation
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"ds-userA\",\"name\":\"user_A001\"}"));
+                .setBody("{\"id\":\"init-file-A\",\"name\":\"init.txt\"}"));
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"dataset\":{\"id\":\"ds-userA\",\"name\":\"user_A001\"}}"));
 
-        // Create dataset for user B
+        // Create dataset for user B: init file upload + dataset creation
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"ds-userB\",\"name\":\"user_B001\"}"));
+                .setBody("{\"id\":\"init-file-B\",\"name\":\"init.txt\"}"));
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"dataset\":{\"id\":\"ds-userB\",\"name\":\"user_B001\"}}"));
 
         DatasetResponse responseA = knowledgeDatasetService.createUserDataset(
                 "A001", "userA", "userA@example.com");
@@ -806,21 +898,9 @@ class KnowledgeServiceTest {
                 "B001", "userB", "userB@example.com");
         assertEquals("ds-userB", responseB.getId());
 
-        // Verify only 2 requests: direct dataset creation for each user (no file uploads)
-        assertEquals(2, mockServer.getRequestCount(),
-                "createDataset should not upload any init files regardless of user");
-    }
-
-    @Test
-    void testDatasetCreatePathPropertyDefault() {
-        assertEquals("/console/api/datasets", properties.getDatasetCreatePath());
-    }
-
-    @Test
-    void testDatasetCreatePathPropertyConfigurable() {
-        KnowledgeProperties customProperties = new KnowledgeProperties();
-        customProperties.setDatasetCreatePath("/custom/api/v3/datasets");
-        assertEquals("/custom/api/v3/datasets", customProperties.getDatasetCreatePath());
+        // Verify 4 requests: init file upload + dataset creation for each user
+        assertEquals(4, mockServer.getRequestCount(),
+                "Each user should upload their own init file");
     }
 
     @Test

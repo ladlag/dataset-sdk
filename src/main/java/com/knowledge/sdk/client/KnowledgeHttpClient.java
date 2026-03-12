@@ -78,15 +78,19 @@ public class KnowledgeHttpClient {
     // ===== Per-user methods (using user-specific token) =====
 
     public DatasetResponse createDataset(String name, String username, String email) {
-        String url = properties.getBaseUrl() + properties.getDatasetCreatePath();
-        String body = "{\"name\":\"" + escapeJson(name) + "\","
-                + "\"indexing_technique\":\"" + escapeJson(properties.getIndexingTechnique()) + "\","
-                + "\"embedding_model\":\"" + escapeJson(properties.getEmbeddingModel()) + "\","
-                + "\"embedding_model_provider\":\"" + escapeJson(properties.getEmbeddingModelProvider()) + "\""
-                + "}";
+        String initFileId = getOrUploadInitFile(username, email);
+        String url = properties.getBaseUrl() + properties.getDatasetInitPath();
+
+        List<String> fileIds = new ArrayList<>();
+        fileIds.add(initFileId);
+        String body = buildInitDatasetBody(name, fileIds);
 
         String responseBody = executeWithRetry("POST", url, body, username, email);
         try {
+            JsonNode root = objectMapper.readTree(responseBody);
+            if (root.has("dataset")) {
+                return objectMapper.treeToValue(root.get("dataset"), DatasetResponse.class);
+            }
             return objectMapper.readValue(responseBody, DatasetResponse.class);
         } catch (Exception e) {
             throw new KnowledgeException("Failed to parse create dataset response", e);
