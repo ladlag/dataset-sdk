@@ -469,7 +469,7 @@ class KnowledgeServiceTest {
         try {
             // createDataset only needs one response (no init file upload)
             mockServer.enqueue(new MockResponse()
-                    .setResponseCode(201)
+                    .setResponseCode(200)
                     .setHeader("Content-Type", "application/json")
                     .setBody("{\"id\":\"ds-kb-alice\",\"name\":\"kb_alice001\"}"));
 
