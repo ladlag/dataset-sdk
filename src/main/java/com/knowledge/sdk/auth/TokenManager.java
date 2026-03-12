@@ -151,17 +151,17 @@ public class TokenManager {
     }
 
     private String doSsoLogin(String username, String email) {
-        if (username == null || username.isEmpty()) {
+        if (username == null || username.trim().isEmpty()) {
             throw new KnowledgeException("SSO login failed: username must not be null or empty");
         }
-        if (email == null || email.isEmpty()) {
+        if (email == null || email.trim().isEmpty()) {
             throw new KnowledgeException("SSO login failed: email must not be null or empty. "
                     + "Please configure 'knowledge.email' property or pass email parameter");
         }
 
         try {
             String userInfoJson = buildUserInfoJson(username, email);
-            log.debug("SSO login userInfo: username={}, email={}", username, email);
+            log.info("SSO login userInfo: username={}, email={}", username, email);
             String encryptedUserInfo = encryptUserInfo(userInfoJson);
 
             String url = properties.getBaseUrl() + properties.getSsoLoginPath();
@@ -169,7 +169,7 @@ public class TokenManager {
                     java.util.Collections.singletonMap("HTTP_USER_INFO", encryptedUserInfo)
             );
 
-            log.debug("SSO login request: url={}, body={}", url, requestBody);
+            log.info("SSO login request: url={}, body={}", url, requestBody);
 
             Request request = new Request.Builder()
                     .url(url)
@@ -182,8 +182,7 @@ public class TokenManager {
             try (Response response = httpClient.newCall(request).execute()) {
                 long elapsed = System.currentTimeMillis() - startTime;
                 String body = response.body() != null ? response.body().string() : "";
-                log.info("SSO login request: url={}, user={}, time={}ms, status={}", url, username, elapsed, response.code());
-                log.debug("SSO login response: url={}, body={}", url, body);
+                log.info("SSO login response: url={}, user={}, time={}ms, status={}, body={}", url, username, elapsed, response.code(), body);
 
                 if (!response.isSuccessful()) {
                     log.error("SSO login failed: status={}, body={}", response.code(), body);
