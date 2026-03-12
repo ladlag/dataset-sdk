@@ -863,7 +863,8 @@ class KnowledgeServiceTest {
     void testCustomInitFileIdCacheSkipsUpload() throws InterruptedException {
         // Simulate a pre-populated cache (e.g. from Redis) where file ID is already known
         InitFileIdCache prePopulatedCache = new InitFileIdCache() {
-            private final java.util.Map<String, String> store = new java.util.HashMap<>();
+            private final java.util.concurrent.ConcurrentHashMap<String, String> store =
+                    new java.util.concurrent.ConcurrentHashMap<>();
             {
                 store.put("default", "pre-cached-file-id");
             }

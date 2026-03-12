@@ -149,7 +149,7 @@ knowledge:
   #
   # 如需 Redis 缓存，请自定义实现 InitFileIdCache 接口并注册为 Spring Bean：
   #
-  # @Bean("knowledgeSdkInitFileIdCache")
+  # @Bean
   # public InitFileIdCache redisInitFileIdCache(StringRedisTemplate redisTemplate) {
   #     return new InitFileIdCache() {
   #         private static final String KEY_PREFIX = "knowledge:init-file:";

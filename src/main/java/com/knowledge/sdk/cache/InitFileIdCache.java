@@ -13,12 +13,12 @@ package com.knowledge.sdk.cache;
  *
  * <p><b>For multi-instance / production deployments:</b> Implement this interface
  * with a Redis-backed (or other shared cache) implementation and register it as
- * a Spring bean named {@code "knowledgeSdkInitFileIdCache"}. The SDK will
- * automatically use your implementation instead of the in-memory default.
+ * a Spring bean. The SDK will automatically use your implementation instead of
+ * the in-memory default (any bean of type {@code InitFileIdCache} takes precedence).
  *
  * <p>Example Redis implementation:
  * <pre>{@code
- * @Bean("knowledgeSdkInitFileIdCache")
+ * @Bean
  * public InitFileIdCache redisInitFileIdCache(StringRedisTemplate redisTemplate) {
  *     return new InitFileIdCache() {
  *         private static final String KEY_PREFIX = "knowledge:init-file:";
