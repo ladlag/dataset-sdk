@@ -2,6 +2,8 @@ package com.knowledge.sdk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.knowledge.sdk.auth.TokenManager;
+import com.knowledge.sdk.cache.InitFileIdCache;
+import com.knowledge.sdk.cache.InMemoryInitFileIdCache;
 import com.knowledge.sdk.client.KnowledgeHttpClient;
 import com.knowledge.sdk.config.KnowledgeProperties;
 import com.knowledge.sdk.exception.KnowledgeException;
@@ -50,7 +52,7 @@ class KnowledgeServiceTest {
         TokenManager tokenManager = new MockTokenManager(properties);
         OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
         KnowledgeHttpClient httpClient = new KnowledgeHttpClient(
-                properties, tokenManager, objectMapper, okHttpClient);
+                properties, tokenManager, objectMapper, okHttpClient, new InMemoryInitFileIdCache());
         knowledgeDatasetService = new KnowledgeDatasetService(httpClient, properties);
     }
 
@@ -670,7 +672,7 @@ class KnowledgeServiceTest {
         TokenManager tokenManager = new MockTokenManager(properties);
         OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
         KnowledgeHttpClient httpClient = new KnowledgeHttpClient(
-                properties, tokenManager, objectMapper, okHttpClient);
+                properties, tokenManager, objectMapper, okHttpClient, new InMemoryInitFileIdCache());
         KnowledgeDatasetService customService = new KnowledgeDatasetService(httpClient, properties);
 
         // Init file upload + dataset creation
@@ -855,6 +857,47 @@ class KnowledgeServiceTest {
         // Verify 4 requests: 2 file uploads + 2 dataset inits (each user gets their own init file)
         assertEquals(4, mockServer.getRequestCount(),
                 "Each user should have their own init file upload");
+    }
+
+    @Test
+    void testCustomInitFileIdCacheSkipsUpload() throws InterruptedException {
+        // Simulate a pre-populated cache (e.g. from Redis) where file ID is already known
+        InitFileIdCache prePopulatedCache = new InitFileIdCache() {
+            private final java.util.Map<String, String> store = new java.util.HashMap<>();
+            {
+                store.put("default", "pre-cached-file-id");
+            }
+            @Override
+            public String get(String key) { return store.get(key); }
+            @Override
+            public void put(String key, String fileId) { store.put(key, fileId); }
+        };
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        TokenManager tokenManager = new MockTokenManager(properties);
+        OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
+        KnowledgeHttpClient httpClient = new KnowledgeHttpClient(
+                properties, tokenManager, objectMapper, okHttpClient, prePopulatedCache);
+        KnowledgeDatasetService serviceWithCache = new KnowledgeDatasetService(httpClient, properties);
+
+        // Only dataset creation response needed (no file upload since cache is pre-populated)
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"id\":\"ds-cached\",\"name\":\"cached_dataset\"}"));
+
+        DatasetResponse response = serviceWithCache.createDataset("cached_dataset");
+        assertEquals("ds-cached", response.getId());
+
+        // Verify only 1 request was made (dataset init only, no file upload)
+        assertEquals(1, mockServer.getRequestCount(),
+                "Pre-populated cache should skip init file upload entirely");
+
+        // Verify the pre-cached file ID was used
+        RecordedRequest request = mockServer.takeRequest();
+        assertEquals("/console/api/datasets/init", request.getPath());
+        assertTrue(request.getBody().readUtf8().contains("\"file_ids\":[\"pre-cached-file-id\"]"),
+                "Should use the pre-cached file ID from custom cache");
     }
 
     /**

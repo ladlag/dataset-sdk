@@ -2,6 +2,8 @@ package com.knowledge.sdk.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.knowledge.sdk.auth.TokenManager;
+import com.knowledge.sdk.cache.InitFileIdCache;
+import com.knowledge.sdk.cache.InMemoryInitFileIdCache;
 import com.knowledge.sdk.client.KnowledgeHttpClient;
 import com.knowledge.sdk.service.KnowledgeDatasetService;
 import okhttp3.ConnectionPool;
@@ -51,13 +53,21 @@ public class KnowledgeAutoConfiguration {
         return new TokenManager(properties, knowledgeSdkOkHttpClient, knowledgeSdkObjectMapper);
     }
 
+    @Bean("knowledgeSdkInitFileIdCache")
+    @ConditionalOnMissingBean(InitFileIdCache.class)
+    public InitFileIdCache knowledgeSdkInitFileIdCache() {
+        return new InMemoryInitFileIdCache();
+    }
+
     @Bean("knowledgeSdkHttpClient")
     @ConditionalOnMissingBean(name = "knowledgeSdkHttpClient")
     public KnowledgeHttpClient knowledgeSdkHttpClient(KnowledgeProperties properties,
                                                        TokenManager knowledgeSdkTokenManager,
                                                        ObjectMapper knowledgeSdkObjectMapper,
-                                                       OkHttpClient knowledgeSdkOkHttpClient) {
-        return new KnowledgeHttpClient(properties, knowledgeSdkTokenManager, knowledgeSdkObjectMapper, knowledgeSdkOkHttpClient);
+                                                       OkHttpClient knowledgeSdkOkHttpClient,
+                                                       InitFileIdCache knowledgeSdkInitFileIdCache) {
+        return new KnowledgeHttpClient(properties, knowledgeSdkTokenManager, knowledgeSdkObjectMapper,
+                knowledgeSdkOkHttpClient, knowledgeSdkInitFileIdCache);
     }
 
     @Bean("knowledgeDatasetService")

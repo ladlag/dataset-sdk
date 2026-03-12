@@ -3,6 +3,7 @@ package com.knowledge.sdk.client;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.knowledge.sdk.auth.TokenManager;
+import com.knowledge.sdk.cache.InitFileIdCache;
 import com.knowledge.sdk.config.KnowledgeProperties;
 import com.knowledge.sdk.exception.KnowledgeException;
 import com.knowledge.sdk.model.*;
@@ -17,7 +18,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class KnowledgeHttpClient {
 
@@ -28,20 +28,16 @@ public class KnowledgeHttpClient {
     private final OkHttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final TokenManager tokenManager;
-
-    /**
-     * Cache of uploaded init file IDs. Key is "default" for the default user,
-     * or "username|email" for per-user uploads. Value is the uploaded file ID.
-     * This avoids re-uploading the same placeholder file for repeated dataset creations.
-     */
-    private final ConcurrentHashMap<String, String> initFileIdCache = new ConcurrentHashMap<>();
+    private final InitFileIdCache initFileIdCache;
 
     public KnowledgeHttpClient(KnowledgeProperties properties, TokenManager tokenManager,
-                               ObjectMapper objectMapper, OkHttpClient httpClient) {
+                               ObjectMapper objectMapper, OkHttpClient httpClient,
+                               InitFileIdCache initFileIdCache) {
         this.properties = properties;
         this.tokenManager = tokenManager;
         this.objectMapper = objectMapper;
         this.httpClient = httpClient;
+        this.initFileIdCache = initFileIdCache;
     }
 
     // ===== Default user methods (using default token) =====
