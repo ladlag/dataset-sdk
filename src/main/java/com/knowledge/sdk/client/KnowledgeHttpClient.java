@@ -78,7 +78,7 @@ public class KnowledgeHttpClient {
     // ===== Per-user methods (using user-specific token) =====
 
     public DatasetResponse createDataset(String name, String username, String email) {
-        String initFileId = getOrUploadInitFile(username, email);
+        String initFileId = getOrUploadInitFile();
         String url = properties.getBaseUrl() + properties.getDatasetInitPath();
 
         List<String> fileIds = new ArrayList<>();
@@ -102,22 +102,22 @@ public class KnowledgeHttpClient {
      * The init file is a small text file used to satisfy the API requirement
      * that data_source.file_ids must not be empty when creating a dataset.
      *
-     * @param username the user's username (null for default token)
-     * @param email    the user's email (null for default token)
+     * <p>A single init file is shared across all users (uploaded with the default token).
+     * The init file is just a placeholder — it doesn't need to be per-user.
+     *
      * @return the uploaded file ID
      */
-    private String getOrUploadInitFile(String username, String email) {
-        String cacheKey = (username != null && email != null)
-                ? username + "|" + email : "default";
+    private String getOrUploadInitFile() {
+        String cacheKey = "default";
 
         String cachedId = initFileIdCache.get(cacheKey);
         if (cachedId != null) {
-            log.debug("Using cached init file ID '{}' for key '{}'", cachedId, cacheKey);
+            log.debug("Using cached init file ID '{}'", cachedId);
             return cachedId;
         }
 
-        log.info("Uploading init file for dataset creation (key={})", cacheKey);
-        String fileId = uploadInitFile(username, email);
+        log.info("Uploading shared init file for dataset creation");
+        String fileId = uploadInitFile();
         initFileIdCache.put(cacheKey, fileId);
         return fileId;
     }
@@ -125,12 +125,11 @@ public class KnowledgeHttpClient {
     /**
      * Upload a small placeholder text file to satisfy the API requirement
      * that file_ids must not be empty when creating a dataset.
+     * Always uses the default token since the init file is shared across all users.
      *
-     * @param username the user's username (null for default token)
-     * @param email    the user's email (null for default token)
      * @return the uploaded file ID
      */
-    private String uploadInitFile(String username, String email) {
+    private String uploadInitFile() {
         String url = properties.getBaseUrl() + properties.getFileUploadPath() + "?source=datasets";
         String fileName = properties.getInitFileName();
         byte[] content = properties.getInitFileContent().getBytes(StandardCharsets.UTF_8);
@@ -142,7 +141,7 @@ public class KnowledgeHttpClient {
                 .build();
 
         try {
-            String responseStr = executeMultipartWithRetry(url, requestBody, username, email);
+            String responseStr = executeMultipartWithRetry(url, requestBody, null, null);
             FileUploadResponse uploadResponse = objectMapper.readValue(responseStr, FileUploadResponse.class);
             String fileId = uploadResponse.getId();
             log.info("Init file uploaded successfully: id={}, name={}", fileId, fileName);

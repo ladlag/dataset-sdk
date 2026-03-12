@@ -168,7 +168,8 @@ class KnowledgeServiceTest {
     @Test
     void testCreateUserDatasetUsesPerUserToken() throws InterruptedException {
         // When creating a dataset with user credentials, the per-user token should be used
-        // Init file upload
+        // for dataset creation, but the init file upload uses the default token (shared)
+        // Init file upload (uses default token)
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
@@ -186,8 +187,10 @@ class KnowledgeServiceTest {
         assertNotNull(response);
         assertEquals("ds-user-token", response.getId());
 
-        // Skip init file upload request
-        mockServer.takeRequest();
+        // Verify init file upload uses default token
+        RecordedRequest initRequest = mockServer.takeRequest();
+        assertEquals("Bearer mock-test-token", initRequest.getHeader("Authorization"),
+                "Init file upload should use default token (shared across all users)");
 
         // Verify the per-user token was used for dataset creation
         RecordedRequest createRequest = mockServer.takeRequest();
@@ -869,22 +872,19 @@ class KnowledgeServiceTest {
     }
 
     @Test
-    void testCreateDatasetWithDifferentUsersUploadsInitFileSeparately() throws InterruptedException {
-        // Create dataset for user A: init file upload + dataset creation
+    void testCreateDatasetWithDifferentUsersSharesInitFile() throws InterruptedException {
+        // Init file is shared across all users — uploaded once with default token
+        // Create dataset for user A: shared init file upload + dataset creation
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"init-file-A\",\"name\":\"init.txt\"}"));
+                .setBody("{\"id\":\"init-file-shared\",\"name\":\"init.txt\"}"));
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
                 .setBody("{\"dataset\":{\"id\":\"ds-userA\",\"name\":\"user_A001\"}}"));
 
-        // Create dataset for user B: init file upload + dataset creation
-        mockServer.enqueue(new MockResponse()
-                .setResponseCode(200)
-                .setHeader("Content-Type", "application/json")
-                .setBody("{\"id\":\"init-file-B\",\"name\":\"init.txt\"}"));
+        // Create dataset for user B: no init file upload (cached), just dataset creation
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)
                 .setHeader("Content-Type", "application/json")
@@ -898,9 +898,28 @@ class KnowledgeServiceTest {
                 "B001", "userB", "userB@example.com");
         assertEquals("ds-userB", responseB.getId());
 
-        // Verify 4 requests: init file upload + dataset creation for each user
-        assertEquals(4, mockServer.getRequestCount(),
-                "Each user should upload their own init file");
+        // Verify 3 requests: 1 shared init file upload + 2 dataset creations
+        assertEquals(3, mockServer.getRequestCount(),
+                "All users should share the same init file");
+
+        // First request: init file upload (uses default token)
+        RecordedRequest initUpload = mockServer.takeRequest();
+        assertTrue(initUpload.getPath().contains("/console/api/files/upload"),
+                "First request should be init file upload");
+        assertEquals("Bearer mock-test-token", initUpload.getHeader("Authorization"),
+                "Init file upload should use default token");
+
+        // Second request: dataset creation for user A (uses user A's token)
+        RecordedRequest createA = mockServer.takeRequest();
+        assertEquals("/console/api/datasets/init", createA.getPath());
+        assertEquals("Bearer mock-user-token-userA", createA.getHeader("Authorization"),
+                "Dataset creation should use user A's token");
+
+        // Third request: dataset creation for user B (uses user B's token)
+        RecordedRequest createB = mockServer.takeRequest();
+        assertEquals("/console/api/datasets/init", createB.getPath());
+        assertEquals("Bearer mock-user-token-userB", createB.getHeader("Authorization"),
+                "Dataset creation should use user B's token");
     }
 
     @Test
