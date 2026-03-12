@@ -128,3 +128,11 @@ knowledge:
   keyword-weight: 0.3                # 关键词权重（与 vector-weight 之和应为 1.0）
   embedding-model: text-embedding-v2  # 嵌入模型
   embedding-model-provider: langgenius/tongyi/tongyi  # 嵌入模型提供商
+
+# ------------------------------------------------------------------
+# [可选] SDK 日志配置
+# ------------------------------------------------------------------
+# 设置 SDK 包的日志级别为 DEBUG，可查看 token 获取、刷新等详细信息
+logging:
+  level:
+    com.knowledge.sdk: DEBUG

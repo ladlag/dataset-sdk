@@ -201,10 +201,11 @@ public class KnowledgeHttpClient {
             return doExecute(method, url, body, false, username, email);
         } catch (KnowledgeException e) {
             if (e.getStatusCode() == 401) {
-                log.info("Received 401, refreshing token and retrying: {}", url);
                 if (username != null && email != null) {
+                    log.info("Received 401, refreshing token for user '{}' and retrying: {}", username, url);
                     tokenManager.invalidateTokenForUser(username, email);
                 } else {
+                    log.info("Received 401, refreshing default user token and retrying: {}", url);
                     tokenManager.invalidateToken();
                 }
                 return doExecute(method, url, body, true, username, email);
@@ -218,10 +219,11 @@ public class KnowledgeHttpClient {
             return doExecuteMultipart(url, requestBody, false, username, email);
         } catch (KnowledgeException e) {
             if (e.getStatusCode() == 401) {
-                log.info("Received 401, refreshing token and retrying multipart: {}", url);
                 if (username != null && email != null) {
+                    log.info("Received 401, refreshing token for user '{}' and retrying multipart: {}", username, url);
                     tokenManager.invalidateTokenForUser(username, email);
                 } else {
+                    log.info("Received 401, refreshing default user token and retrying multipart: {}", url);
                     tokenManager.invalidateToken();
                 }
                 return doExecuteMultipart(url, requestBody, true, username, email);
@@ -232,8 +234,14 @@ public class KnowledgeHttpClient {
 
     private String resolveToken(String username, String email) {
         if (username != null && email != null) {
+            log.debug("Resolving token for specified user: {}", username);
             return tokenManager.getTokenForUser(username, email);
         }
+        if (username != null || email != null) {
+            log.warn("Only one of username/email provided (username={}, email={}), "
+                    + "both are required for per-user token. Falling back to default token.", username, email);
+        }
+        log.debug("Resolving token for default user");
         return tokenManager.getToken();
     }
 

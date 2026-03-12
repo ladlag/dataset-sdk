@@ -135,6 +135,48 @@ class KnowledgeServiceTest {
     }
 
     @Test
+    void testCreateUserDatasetUsesPerUserToken() throws InterruptedException {
+        // When creating a dataset with user credentials, the per-user token should be used
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"id\":\"ds-user-token\",\"name\":\"user_charlie003\"}"));
+
+        DatasetResponse response = knowledgeDatasetService.createUserDataset(
+                "charlie003", "charlie", "charlie@example.com");
+
+        assertNotNull(response);
+        assertEquals("ds-user-token", response.getId());
+
+        // Verify the per-user token was used (mock returns "mock-user-token-{username}")
+        RecordedRequest request = mockServer.takeRequest();
+        String authHeader = request.getHeader("Authorization");
+        assertEquals("Bearer mock-user-token-charlie", authHeader,
+                "Per-user token should be used when username and email are provided");
+    }
+
+    @Test
+    void testCreateDatasetWithPartialCredentialsFallsBackToDefault() throws InterruptedException {
+        // When only username is provided (email is null), should fall back to default token
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"id\":\"ds-partial\",\"name\":\"partial_dataset\"}"));
+
+        // Call createDataset directly with only username (null email)
+        DatasetResponse response = knowledgeDatasetService.createDataset("partial_dataset", "someuser", null);
+
+        assertNotNull(response);
+        assertEquals("ds-partial", response.getId());
+
+        // Verify the default token was used (since email is null, falls back to default)
+        RecordedRequest request = mockServer.takeRequest();
+        String authHeader = request.getHeader("Authorization");
+        assertEquals("Bearer mock-test-token", authHeader,
+                "Default token should be used when only username is provided (email is null)");
+    }
+
+    @Test
     void testCreatePublicDataset() {
         mockServer.enqueue(new MockResponse()
                 .setResponseCode(200)

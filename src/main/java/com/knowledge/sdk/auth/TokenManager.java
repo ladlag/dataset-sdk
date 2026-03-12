@@ -96,7 +96,7 @@ public class TokenManager {
             this.expireTime = System.currentTimeMillis()
                     + (properties.getTokenTtlSeconds() - properties.getTokenExpiryBufferSeconds()) * 1000;
 
-            log.info("Default user access token refreshed successfully");
+            log.debug("Default user token obtained: {}", this.token);
             return this.token;
         } finally {
             lock.writeLock().unlock();
@@ -123,7 +123,7 @@ public class TokenManager {
                     + (properties.getTokenTtlSeconds() - properties.getTokenExpiryBufferSeconds()) * 1000;
             userTokenCache.put(cacheKey, new TokenEntry(accessToken, expiry));
 
-            log.info("User {} access token refreshed successfully", username);
+            log.debug("User '{}' token obtained: {}", username, accessToken);
             return accessToken;
         }
     }
@@ -187,6 +187,7 @@ public class TokenManager {
                     throw new KnowledgeException("SSO login response missing access_token");
                 }
 
+                log.debug("SSO login successful for user '{}', obtained token: {}", username, accessToken);
                 return accessToken;
             }
         } catch (KnowledgeException e) {
