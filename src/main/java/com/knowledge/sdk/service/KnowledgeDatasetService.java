@@ -189,24 +189,74 @@ public class KnowledgeDatasetService {
     }
 
     /**
-     * Delete a document from a knowledge base.
+     * List knowledge bases using the default token.
+     *
+     * @param keyword search keyword (optional, null for all)
+     * @param page    page number (starts from 1)
+     * @param limit   results per page
+     * @return paginated dataset list
+     */
+    public DatasetListResponse listDatasets(String keyword, int page, int limit) {
+        return listDatasets(keyword, page, limit, null, null);
+    }
+
+    /**
+     * List knowledge bases using a user-specific token.
+     *
+     * @param keyword  search keyword (optional, null for all)
+     * @param page     page number (starts from 1)
+     * @param limit    results per page
+     * @param username the user's username for SSO login (null for default token)
+     * @param email    the user's email for SSO login (null for default token)
+     * @return paginated dataset list
+     */
+    public DatasetListResponse listDatasets(String keyword, int page, int limit,
+                                             String username, String email) {
+        return httpClient.listDatasets(keyword, page, limit, username, email);
+    }
+
+    /**
+     * Delete a document from a knowledge base using the default token.
      *
      * @param datasetId  ID of the knowledge base
      * @param documentId ID of the document to delete
      */
     public void deleteDocument(String datasetId, String documentId) {
-        log.info("Deleting document {} from dataset {}", documentId, datasetId);
-        httpClient.deleteDocument(datasetId, documentId);
+        deleteDocument(datasetId, documentId, null, null);
     }
 
     /**
-     * Delete a knowledge base.
+     * Delete a document from a knowledge base using a user-specific token.
+     *
+     * @param datasetId  ID of the knowledge base
+     * @param documentId ID of the document to delete
+     * @param username   the user's username for SSO login (null for default token)
+     * @param email      the user's email for SSO login (null for default token)
+     */
+    public void deleteDocument(String datasetId, String documentId, String username, String email) {
+        log.info("Deleting document {} from dataset {}", documentId, datasetId);
+        httpClient.deleteDocument(datasetId, documentId, username, email);
+    }
+
+    /**
+     * Delete a knowledge base using the default token.
      *
      * @param datasetId ID of the knowledge base to delete
      */
     public void deleteDataset(String datasetId) {
+        deleteDataset(datasetId, null, null);
+    }
+
+    /**
+     * Delete a knowledge base using a user-specific token.
+     *
+     * @param datasetId ID of the knowledge base to delete
+     * @param username  the user's username for SSO login (null for default token)
+     * @param email     the user's email for SSO login (null for default token)
+     */
+    public void deleteDataset(String datasetId, String username, String email) {
         log.info("Deleting dataset {}", datasetId);
-        httpClient.deleteDataset(datasetId);
+        httpClient.deleteDataset(datasetId, username, email);
     }
 
     private String findDatasetByName(String datasetName, String username, String email) {

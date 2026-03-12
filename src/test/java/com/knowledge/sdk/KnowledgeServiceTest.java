@@ -7,6 +7,7 @@ import com.knowledge.sdk.cache.InMemoryInitFileIdCache;
 import com.knowledge.sdk.client.KnowledgeHttpClient;
 import com.knowledge.sdk.config.KnowledgeProperties;
 import com.knowledge.sdk.exception.KnowledgeException;
+import com.knowledge.sdk.model.DatasetListResponse;
 import com.knowledge.sdk.model.DatasetResponse;
 import com.knowledge.sdk.service.KnowledgeDatasetService;
 import okhttp3.OkHttpClient;
@@ -441,11 +442,64 @@ class KnowledgeServiceTest {
     }
 
     @Test
+    void testDeleteDocumentWithUserToken() throws InterruptedException {
+        mockServer.enqueue(new MockResponse().setResponseCode(204));
+
+        assertDoesNotThrow(() ->
+                knowledgeDatasetService.deleteDocument("ds-001", "doc-001", "alice", "alice@test.com"));
+
+        RecordedRequest request = mockServer.takeRequest();
+        assertEquals("DELETE", request.getMethod());
+        assertTrue(request.getPath().contains("/datasets/ds-001/documents/doc-001"));
+    }
+
+    @Test
     void testDeleteDataset() {
         mockServer.enqueue(new MockResponse().setResponseCode(204));
 
         assertDoesNotThrow(() ->
                 knowledgeDatasetService.deleteDataset("ds-001"));
+    }
+
+    @Test
+    void testDeleteDatasetWithUserToken() throws InterruptedException {
+        mockServer.enqueue(new MockResponse().setResponseCode(204));
+
+        assertDoesNotThrow(() ->
+                knowledgeDatasetService.deleteDataset("ds-001", "alice", "alice@test.com"));
+
+        RecordedRequest request = mockServer.takeRequest();
+        assertEquals("DELETE", request.getMethod());
+        assertTrue(request.getPath().contains("/datasets/ds-001"));
+    }
+
+    @Test
+    void testListDatasets() {
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"data\":[{\"id\":\"ds-1\",\"name\":\"test\"}],\"has_more\":false,\"total\":1,\"page\":1,\"limit\":20}"));
+
+        DatasetListResponse result = knowledgeDatasetService.listDatasets(null, 1, 20);
+
+        assertNotNull(result);
+        assertNotNull(result.getData());
+        assertEquals(1, result.getData().size());
+        assertEquals("ds-1", result.getData().get(0).getId());
+    }
+
+    @Test
+    void testListDatasetsWithKeyword() throws InterruptedException {
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"data\":[],\"has_more\":false,\"total\":0,\"page\":1,\"limit\":20}"));
+
+        DatasetListResponse result = knowledgeDatasetService.listDatasets("test-keyword", 1, 20);
+
+        assertNotNull(result);
+        RecordedRequest request = mockServer.takeRequest();
+        assertTrue(request.getPath().contains("keyword=test-keyword"));
     }
 
     @Test
