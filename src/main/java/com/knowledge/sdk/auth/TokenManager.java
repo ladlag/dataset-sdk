@@ -96,7 +96,7 @@ public class TokenManager {
             this.expireTime = System.currentTimeMillis()
                     + (properties.getTokenTtlSeconds() - properties.getTokenExpiryBufferSeconds()) * 1000;
 
-            log.debug("Default user token obtained: {}", this.token);
+            log.debug("Default user token obtained: {}", maskToken(this.token));
             return this.token;
         } finally {
             lock.writeLock().unlock();
@@ -123,7 +123,7 @@ public class TokenManager {
                     + (properties.getTokenTtlSeconds() - properties.getTokenExpiryBufferSeconds()) * 1000;
             userTokenCache.put(cacheKey, new TokenEntry(accessToken, expiry));
 
-            log.debug("User '{}' token obtained: {}", username, accessToken);
+            log.debug("User '{}' token obtained: {}", username, maskToken(accessToken));
             return accessToken;
         }
     }
@@ -187,7 +187,7 @@ public class TokenManager {
                     throw new KnowledgeException("SSO login response missing access_token");
                 }
 
-                log.debug("SSO login successful for user '{}', obtained token: {}", username, accessToken);
+                log.debug("SSO login successful for user '{}', obtained token: {}", username, maskToken(accessToken));
                 return accessToken;
             }
         } catch (KnowledgeException e) {
@@ -261,6 +261,12 @@ public class TokenManager {
 
     private String buildCacheKey(String username, String email) {
         return username + "|" + email;
+    }
+
+    private String maskToken(String token) {
+        if (token == null) return "null";
+        if (token.length() <= 8) return "****";
+        return token.substring(0, 4) + "..." + token.substring(token.length() - 4);
     }
 
     private static class TokenEntry {
