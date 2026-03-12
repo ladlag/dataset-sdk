@@ -1,5 +1,6 @@
 package com.knowledge.sdk.service;
 
+import com.knowledge.sdk.cache.DatasetIdCache;
 import com.knowledge.sdk.client.KnowledgeHttpClient;
 import com.knowledge.sdk.config.KnowledgeProperties;
 import com.knowledge.sdk.exception.KnowledgeException;
@@ -12,7 +13,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class KnowledgeDatasetService {
 
@@ -20,12 +20,13 @@ public class KnowledgeDatasetService {
 
     private final KnowledgeHttpClient httpClient;
     private final KnowledgeProperties properties;
+    private final DatasetIdCache datasetCache;
 
-    private final ConcurrentHashMap<String, String> datasetCache = new ConcurrentHashMap<>();
-
-    public KnowledgeDatasetService(KnowledgeHttpClient httpClient, KnowledgeProperties properties) {
+    public KnowledgeDatasetService(KnowledgeHttpClient httpClient, KnowledgeProperties properties,
+                                    DatasetIdCache datasetCache) {
         this.httpClient = httpClient;
         this.properties = properties;
+        this.datasetCache = datasetCache;
     }
 
     /**
@@ -213,7 +214,7 @@ public class KnowledgeDatasetService {
         log.info("Deleting dataset {}", datasetId);
         httpClient.deleteDataset(datasetId);
 
-        datasetCache.entrySet().removeIf(entry -> datasetId.equals(entry.getValue()));
+        datasetCache.removeByValue(datasetId);
     }
 
     private String findOrCacheDatasetId(String datasetName, String username, String email) {

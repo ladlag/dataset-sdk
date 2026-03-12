@@ -140,29 +140,32 @@ knowledge:
   init-file-content: Knowledge Base Initialization File  # 初始化占位文件内容
 
   # ------------------------------------------------------------------
-  # [可选] 初始化文件缓存配置
+  # [可选] 缓存配置
   # ------------------------------------------------------------------
-  # SDK 默认使用内存缓存（ConcurrentHashMap）存储 init 文件 ID。
-  # 这在单实例部署中已足够，但有以下限制：
-  #   - 应用重启后缓存丢失（init 文件会重新上传）
-  #   - 多实例部署时缓存不共享
+  # SDK 有两类缓存：init 文件 ID 缓存 和 知识库 ID 缓存。
   #
-  # 如需 Redis 缓存，请自定义实现 InitFileIdCache 接口并注册为 Spring Bean：
+  # 单实例部署（默认）：
+  #   使用内存缓存（ConcurrentHashMap），无需额外配置。
   #
-  # @Bean
-  # public InitFileIdCache redisInitFileIdCache(StringRedisTemplate redisTemplate) {
-  #     return new InitFileIdCache() {
-  #         private static final String KEY_PREFIX = "knowledge:init-file:";
-  #         @Override
-  #         public String get(String key) {
-  #             return redisTemplate.opsForValue().get(KEY_PREFIX + key);
-  #         }
-  #         @Override
-  #         public void put(String key, String fileId) {
-  #             redisTemplate.opsForValue().set(KEY_PREFIX + key, fileId, 24, TimeUnit.HOURS);
-  #         }
-  #     };
-  # }
+  # 多实例部署（推荐使用 Redis）：
+  #   只需添加 spring-boot-starter-data-redis 依赖并配置 Redis 连接，
+  #   SDK 会自动切换为 Redis 缓存，所有实例共享缓存数据。
+  #
+  #   1. 在 pom.xml 中添加：
+  #      <dependency>
+  #          <groupId>org.springframework.boot</groupId>
+  #          <artifactId>spring-boot-starter-data-redis</artifactId>
+  #      </dependency>
+  #
+  #   2. 在 application.yml 中配置 Redis 连接：
+  #      spring:
+  #        redis:
+  #          host: localhost
+  #          port: 6379
+  #          password: your-redis-password   # 如有密码
+  #
+  # Redis 缓存的 TTL（小时），默认 24 小时
+  cache-ttl-hours: 24
 
 # ------------------------------------------------------------------
 # [可选] SDK 日志配置

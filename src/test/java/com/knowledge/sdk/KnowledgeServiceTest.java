@@ -2,7 +2,9 @@ package com.knowledge.sdk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.knowledge.sdk.auth.TokenManager;
+import com.knowledge.sdk.cache.DatasetIdCache;
 import com.knowledge.sdk.cache.InitFileIdCache;
+import com.knowledge.sdk.cache.InMemoryDatasetIdCache;
 import com.knowledge.sdk.cache.InMemoryInitFileIdCache;
 import com.knowledge.sdk.client.KnowledgeHttpClient;
 import com.knowledge.sdk.config.KnowledgeProperties;
@@ -53,7 +55,8 @@ class KnowledgeServiceTest {
         OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
         KnowledgeHttpClient httpClient = new KnowledgeHttpClient(
                 properties, tokenManager, objectMapper, okHttpClient, new InMemoryInitFileIdCache());
-        knowledgeDatasetService = new KnowledgeDatasetService(httpClient, properties);
+        knowledgeDatasetService = new KnowledgeDatasetService(httpClient, properties,
+                new InMemoryDatasetIdCache());
     }
 
     @AfterEach
@@ -673,7 +676,8 @@ class KnowledgeServiceTest {
         OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
         KnowledgeHttpClient httpClient = new KnowledgeHttpClient(
                 properties, tokenManager, objectMapper, okHttpClient, new InMemoryInitFileIdCache());
-        KnowledgeDatasetService customService = new KnowledgeDatasetService(httpClient, properties);
+        KnowledgeDatasetService customService = new KnowledgeDatasetService(httpClient, properties,
+                new InMemoryDatasetIdCache());
 
         // Init file upload + dataset creation
         mockServer.enqueue(new MockResponse()
@@ -879,7 +883,8 @@ class KnowledgeServiceTest {
         OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
         KnowledgeHttpClient httpClient = new KnowledgeHttpClient(
                 properties, tokenManager, objectMapper, okHttpClient, prePopulatedCache);
-        KnowledgeDatasetService serviceWithCache = new KnowledgeDatasetService(httpClient, properties);
+        KnowledgeDatasetService serviceWithCache = new KnowledgeDatasetService(httpClient, properties,
+                new InMemoryDatasetIdCache());
 
         // Only dataset creation response needed (no file upload since cache is pre-populated)
         mockServer.enqueue(new MockResponse()
@@ -899,6 +904,92 @@ class KnowledgeServiceTest {
         assertEquals("/console/api/datasets/init", request.getPath());
         assertTrue(request.getBody().readUtf8().contains("\"file_ids\":[\"pre-cached-file-id\"]"),
                 "Should use the pre-cached file ID from custom cache");
+    }
+
+    @Test
+    void testInMemoryDatasetIdCacheGetPutRemove() {
+        InMemoryDatasetIdCache cache = new InMemoryDatasetIdCache();
+
+        // Initially empty
+        assertNull(cache.get("test-dataset"));
+
+        // Put and get
+        cache.put("test-dataset", "ds-123");
+        assertEquals("ds-123", cache.get("test-dataset"));
+
+        // Put another entry
+        cache.put("other-dataset", "ds-456");
+        assertEquals("ds-456", cache.get("other-dataset"));
+
+        // Remove by value should remove the correct entry
+        cache.removeByValue("ds-123");
+        assertNull(cache.get("test-dataset"));
+        assertEquals("ds-456", cache.get("other-dataset"), "Other entries should not be affected");
+    }
+
+    @Test
+    void testCustomDatasetIdCacheUsedByService() throws InterruptedException {
+        // Create a pre-populated dataset cache (simulating Redis with existing data)
+        DatasetIdCache prePopulatedDatasetCache = new DatasetIdCache() {
+            private final java.util.concurrent.ConcurrentHashMap<String, String> store =
+                    new java.util.concurrent.ConcurrentHashMap<>();
+            {
+                store.put("existing_dataset", "ds-pre-existing");
+            }
+            @Override
+            public String get(String datasetName) { return store.get(datasetName); }
+            @Override
+            public void put(String datasetName, String datasetId) { store.put(datasetName, datasetId); }
+            @Override
+            public void removeByValue(String datasetId) {
+                store.entrySet().removeIf(e -> datasetId.equals(e.getValue()));
+            }
+        };
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        TokenManager tokenManager = new MockTokenManager(properties);
+        OkHttpClient okHttpClient = new OkHttpClient.Builder().build();
+        KnowledgeHttpClient httpClient = new KnowledgeHttpClient(
+                properties, tokenManager, objectMapper, okHttpClient, new InMemoryInitFileIdCache());
+        KnowledgeDatasetService serviceWithDatasetCache = new KnowledgeDatasetService(
+                httpClient, properties, prePopulatedDatasetCache);
+
+        // Enqueue responses: init file upload + dataset creation with documents
+        // (file upload for the actual document)
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(201)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"id\":\"file-doc1\",\"name\":\"test.txt\"}"));
+
+        // Create document in dataset (uses pre-cached dataset ID, so no list-datasets call needed)
+        mockServer.enqueue(new MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "application/json")
+                .setBody("{\"batch\":\"batch-001\",\"dataset_id\":\"ds-pre-existing\"}"));
+
+        MockMultipartFile testFile = new MockMultipartFile(
+                "file", "test.txt", "text/plain", "test content".getBytes());
+
+        List<String> results = serviceWithDatasetCache.uploadDocuments(
+                "existing_dataset", Collections.singletonList(testFile));
+
+        assertFalse(results.isEmpty());
+        // Verify only 2 requests (file upload + create document),
+        // NOT 3 (no list-datasets since dataset ID was pre-cached)
+        assertEquals(2, mockServer.getRequestCount(),
+                "Pre-populated dataset cache should skip list-datasets API call");
+    }
+
+    @Test
+    void testCacheTtlHoursPropertyDefault() {
+        assertEquals(24, properties.getCacheTtlHours());
+    }
+
+    @Test
+    void testCacheTtlHoursPropertyConfigurable() {
+        KnowledgeProperties customProperties = new KnowledgeProperties();
+        customProperties.setCacheTtlHours(48);
+        assertEquals(48, customProperties.getCacheTtlHours());
     }
 
     /**

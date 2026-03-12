@@ -7,34 +7,17 @@ package com.knowledge.sdk.cache;
  * The SDK auto-uploads a small placeholder file and caches the returned file ID
  * to avoid re-uploading on subsequent dataset creations.
  *
- * <p><b>Default behavior:</b> The SDK provides an in-memory implementation
+ * <p><b>Default behavior (single-instance):</b> The SDK provides an in-memory implementation
  * ({@link InMemoryInitFileIdCache}) backed by {@code ConcurrentHashMap}.
- * This is sufficient for single-instance deployments.
  *
- * <p><b>For multi-instance / production deployments:</b> Implement this interface
- * with a Redis-backed (or other shared cache) implementation and register it as
- * a Spring bean. The SDK will automatically use your implementation instead of
- * the in-memory default (any bean of type {@code InitFileIdCache} takes precedence).
+ * <p><b>Multi-instance deployment:</b> Add {@code spring-boot-starter-data-redis} to your
+ * classpath and configure Redis. The SDK will automatically use {@link RedisInitFileIdCache}
+ * to share cache across instances. Redis TTL is configurable via {@code knowledge.cache-ttl-hours}
+ * (default: 24 hours).
  *
- * <p>Example Redis implementation:
- * <pre>{@code
- * @Bean
- * public InitFileIdCache redisInitFileIdCache(StringRedisTemplate redisTemplate) {
- *     return new InitFileIdCache() {
- *         private static final String KEY_PREFIX = "knowledge:init-file:";
- *
- *         @Override
- *         public String get(String key) {
- *             return redisTemplate.opsForValue().get(KEY_PREFIX + key);
- *         }
- *
- *         @Override
- *         public void put(String key, String fileId) {
- *             redisTemplate.opsForValue().set(KEY_PREFIX + key, fileId, 24, TimeUnit.HOURS);
- *         }
- *     };
- * }
- * }</pre>
+ * <p><b>Custom implementation:</b> You can also provide your own implementation by
+ * registering a bean of type {@code InitFileIdCache}. It will take precedence over
+ * both the in-memory and Redis defaults.
  *
  * <p>Cache keys follow the format:
  * <ul>

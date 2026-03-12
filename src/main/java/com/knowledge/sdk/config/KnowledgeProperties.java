@@ -260,6 +260,15 @@ public class KnowledgeProperties {
      */
     private String initFileContent = "Knowledge Base Initialization File";
 
+    // ===== Cache configuration =====
+
+    /**
+     * Cache TTL in hours for Redis-backed caches (init file ID cache, dataset ID cache).
+     * Only applies when spring-boot-starter-data-redis is on the classpath.
+     * Default: 24 hours.
+     */
+    private long cacheTtlHours = 24;
+
     public String getBaseUrl() {
         return baseUrl;
     }
@@ -634,5 +643,13 @@ public class KnowledgeProperties {
 
     public void setInitFileContent(String initFileContent) {
         this.initFileContent = initFileContent;
+    }
+
+    public long getCacheTtlHours() {
+        return cacheTtlHours;
+    }
+
+    public void setCacheTtlHours(long cacheTtlHours) {
+        this.cacheTtlHours = cacheTtlHours;
     }
 }
