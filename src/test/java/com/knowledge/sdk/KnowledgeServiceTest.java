@@ -932,6 +932,45 @@ class KnowledgeServiceTest {
         assertEquals(48, customProperties.getCacheTtlHours());
     }
 
+    @Test
+    void testSsoLoginFailsWhenEmailIsNull() {
+        KnowledgeProperties props = new KnowledgeProperties();
+        props.setBaseUrl("http://localhost");
+        props.setUsername("testuser");
+        props.setEmail(null);
+        TokenManager realTokenManager = new TokenManager(props, new OkHttpClient(), new ObjectMapper());
+
+        KnowledgeException ex = assertThrows(KnowledgeException.class, () -> realTokenManager.refreshToken());
+        assertTrue(ex.getMessage().contains("email"),
+                "Error message should mention email is required, but was: " + ex.getMessage());
+    }
+
+    @Test
+    void testSsoLoginFailsWhenEmailIsEmpty() {
+        KnowledgeProperties props = new KnowledgeProperties();
+        props.setBaseUrl("http://localhost");
+        props.setUsername("testuser");
+        props.setEmail("");
+        TokenManager realTokenManager = new TokenManager(props, new OkHttpClient(), new ObjectMapper());
+
+        KnowledgeException ex = assertThrows(KnowledgeException.class, () -> realTokenManager.refreshToken());
+        assertTrue(ex.getMessage().contains("email"),
+                "Error message should mention email is required, but was: " + ex.getMessage());
+    }
+
+    @Test
+    void testSsoLoginFailsWhenUsernameIsNull() {
+        KnowledgeProperties props = new KnowledgeProperties();
+        props.setBaseUrl("http://localhost");
+        props.setUsername(null);
+        props.setEmail("test@example.com");
+        TokenManager realTokenManager = new TokenManager(props, new OkHttpClient(), new ObjectMapper());
+
+        KnowledgeException ex = assertThrows(KnowledgeException.class, () -> realTokenManager.refreshToken());
+        assertTrue(ex.getMessage().contains("username"),
+                "Error message should mention username is required, but was: " + ex.getMessage());
+    }
+
     /**
      * Simple mock TokenManager that returns a static token for testing,
      * without actually making SSO login calls.

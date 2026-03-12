@@ -333,14 +333,16 @@ public class KnowledgeHttpClient {
         }
 
         Request request = requestBuilder.build();
+        log.debug("HTTP {} request: url={}, body={}", method, url, body);
         long startTime = System.currentTimeMillis();
 
         try (Response response = httpClient.newCall(request).execute()) {
             long elapsed = System.currentTimeMillis() - startTime;
-            log.info("HTTP {} request: url={}, time={}ms, status={}",
-                    method, url, elapsed, response.code());
 
             String responseBody = response.body() != null ? response.body().string() : "";
+            log.info("HTTP {} request: url={}, time={}ms, status={}",
+                    method, url, elapsed, response.code());
+            log.debug("HTTP {} response: url={}, body={}", method, url, responseBody);
 
             if (response.code() == 401 && !isRetry) {
                 throw new KnowledgeException("Unauthorized", 401);
@@ -374,14 +376,16 @@ public class KnowledgeHttpClient {
                 .post(requestBody)
                 .build();
 
+        log.debug("HTTP multipart upload request: url={}", url);
         long startTime = System.currentTimeMillis();
 
         try (Response response = httpClient.newCall(request).execute()) {
             long elapsed = System.currentTimeMillis() - startTime;
-            log.info("HTTP multipart upload: url={}, time={}ms, status={}",
-                    url, elapsed, response.code());
 
             String responseStr = response.body() != null ? response.body().string() : "";
+            log.info("HTTP multipart upload: url={}, time={}ms, status={}",
+                    url, elapsed, response.code());
+            log.debug("HTTP multipart upload response: url={}, body={}", url, responseStr);
 
             if (response.code() == 401 && !isRetry) {
                 throw new KnowledgeException("Unauthorized", 401);
