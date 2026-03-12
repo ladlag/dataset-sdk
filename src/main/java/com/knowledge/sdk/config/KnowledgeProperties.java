@@ -263,7 +263,7 @@ public class KnowledgeProperties {
     // ===== Cache configuration =====
 
     /**
-     * Cache TTL in hours for Redis-backed caches (init file ID cache, dataset ID cache).
+     * Cache TTL in hours for the Redis-backed init file ID cache.
      * Only applies when spring-boot-starter-data-redis is on the classpath.
      * Default: 24 hours.
      */

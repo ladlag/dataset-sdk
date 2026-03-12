@@ -2,8 +2,6 @@ package com.knowledge.sdk.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.knowledge.sdk.auth.TokenManager;
-import com.knowledge.sdk.cache.DatasetIdCache;
-import com.knowledge.sdk.cache.InMemoryDatasetIdCache;
 import com.knowledge.sdk.cache.InitFileIdCache;
 import com.knowledge.sdk.cache.InMemoryInitFileIdCache;
 import com.knowledge.sdk.client.KnowledgeHttpClient;
@@ -63,12 +61,6 @@ public class KnowledgeAutoConfiguration {
         return new InMemoryInitFileIdCache();
     }
 
-    @Bean("knowledgeSdkDatasetIdCache")
-    @ConditionalOnMissingBean(DatasetIdCache.class)
-    public DatasetIdCache knowledgeSdkDatasetIdCache() {
-        return new InMemoryDatasetIdCache();
-    }
-
     @Bean("knowledgeSdkHttpClient")
     @ConditionalOnMissingBean(name = "knowledgeSdkHttpClient")
     public KnowledgeHttpClient knowledgeSdkHttpClient(KnowledgeProperties properties,
@@ -83,8 +75,7 @@ public class KnowledgeAutoConfiguration {
     @Bean("knowledgeDatasetService")
     @ConditionalOnMissingBean(name = "knowledgeDatasetService")
     public KnowledgeDatasetService knowledgeDatasetService(KnowledgeHttpClient knowledgeSdkHttpClient,
-                                                            KnowledgeProperties properties,
-                                                            DatasetIdCache knowledgeSdkDatasetIdCache) {
-        return new KnowledgeDatasetService(knowledgeSdkHttpClient, properties, knowledgeSdkDatasetIdCache);
+                                                            KnowledgeProperties properties) {
+        return new KnowledgeDatasetService(knowledgeSdkHttpClient, properties);
     }
 }

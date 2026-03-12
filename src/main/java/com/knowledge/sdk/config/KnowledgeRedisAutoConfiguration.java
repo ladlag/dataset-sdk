@@ -19,11 +19,12 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  *   <li>A {@code StringRedisTemplate} bean is available (i.e. Redis is configured)</li>
  * </ul>
  *
- * <p>It registers Redis-backed implementations of {@link InitFileIdCache} and
- * {@link DatasetIdCache}, replacing the default in-memory implementations.
+ * <p>It registers a Redis-backed implementation of {@link InitFileIdCache},
+ * replacing the default in-memory implementation. Init file IDs are rarely-changing
+ * data suitable for caching across multiple application instances.
  *
  * <p>To use in-memory caches instead, simply do not add {@code spring-boot-starter-data-redis}
- * to your classpath, or provide your own beans of type {@code InitFileIdCache} / {@code DatasetIdCache}.
+ * to your classpath, or provide your own bean of type {@code InitFileIdCache}.
  */
 @Configuration
 @ConditionalOnClass(StringRedisTemplate.class)
@@ -38,13 +39,5 @@ public class KnowledgeRedisAutoConfiguration {
                                                  KnowledgeProperties properties) {
         log.info("Using Redis-backed InitFileIdCache (TTL={}h)", properties.getCacheTtlHours());
         return new RedisInitFileIdCache(redisTemplate, properties.getCacheTtlHours());
-    }
-
-    @Bean("knowledgeSdkDatasetIdCache")
-    @ConditionalOnMissingBean(DatasetIdCache.class)
-    public DatasetIdCache redisDatasetIdCache(StringRedisTemplate redisTemplate,
-                                               KnowledgeProperties properties) {
-        log.info("Using Redis-backed DatasetIdCache (TTL={}h)", properties.getCacheTtlHours());
-        return new RedisDatasetIdCache(redisTemplate, properties.getCacheTtlHours());
     }
 }

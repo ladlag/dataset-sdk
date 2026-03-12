@@ -1,6 +1,5 @@
 package com.knowledge.sdk.service;
 
-import com.knowledge.sdk.cache.DatasetIdCache;
 import com.knowledge.sdk.client.KnowledgeHttpClient;
 import com.knowledge.sdk.config.KnowledgeProperties;
 import com.knowledge.sdk.exception.KnowledgeException;
@@ -20,13 +19,10 @@ public class KnowledgeDatasetService {
 
     private final KnowledgeHttpClient httpClient;
     private final KnowledgeProperties properties;
-    private final DatasetIdCache datasetCache;
 
-    public KnowledgeDatasetService(KnowledgeHttpClient httpClient, KnowledgeProperties properties,
-                                    DatasetIdCache datasetCache) {
+    public KnowledgeDatasetService(KnowledgeHttpClient httpClient, KnowledgeProperties properties) {
         this.httpClient = httpClient;
         this.properties = properties;
-        this.datasetCache = datasetCache;
     }
 
     /**
@@ -105,7 +101,7 @@ public class KnowledgeDatasetService {
         List<List<MultipartFile>> batches = splitIntoBatches(files);
         log.info("Split into {} batches", batches.size());
 
-        String datasetId = findOrCacheDatasetId(datasetName, username, email);
+        String datasetId = findDatasetByName(datasetName, username, email);
         List<String> results = new ArrayList<>();
 
         for (int i = 0; i < batches.size(); i++) {
@@ -121,7 +117,6 @@ public class KnowledgeDatasetService {
             if (datasetId == null) {
                 log.info("Dataset '{}' not found, creating with initial documents", datasetName);
                 datasetId = httpClient.initDatasetWithDocuments(datasetName, fileIds, username, email);
-                datasetCache.put(datasetName, datasetId);
                 results.add(datasetId);
             } else {
                 String batchResult = httpClient.createDocumentInDataset(datasetId, fileIds, username, email);
@@ -153,7 +148,6 @@ public class KnowledgeDatasetService {
     public DatasetResponse createDataset(String name, String username, String email) {
         log.info("Creating dataset: {}", name);
         DatasetResponse response = httpClient.createDataset(name, username, email);
-        datasetCache.put(name, response.getId());
         return response;
     }
 
@@ -213,21 +207,6 @@ public class KnowledgeDatasetService {
     public void deleteDataset(String datasetId) {
         log.info("Deleting dataset {}", datasetId);
         httpClient.deleteDataset(datasetId);
-
-        datasetCache.removeByValue(datasetId);
-    }
-
-    private String findOrCacheDatasetId(String datasetName, String username, String email) {
-        String cachedId = datasetCache.get(datasetName);
-        if (cachedId != null) {
-            return cachedId;
-        }
-
-        String existingId = findDatasetByName(datasetName, username, email);
-        if (existingId != null) {
-            datasetCache.put(datasetName, existingId);
-        }
-        return existingId;
     }
 
     private String findDatasetByName(String datasetName, String username, String email) {
