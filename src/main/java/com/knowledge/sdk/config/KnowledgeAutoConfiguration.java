@@ -44,7 +44,9 @@ public class KnowledgeAutoConfiguration {
     @Bean("knowledgeSdkObjectMapper")
     @ConditionalOnMissingBean(name = "knowledgeSdkObjectMapper")
     public ObjectMapper knowledgeSdkObjectMapper() {
-        return new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.findAndRegisterModules();
+        return mapper;
     }
 
     @Bean("knowledgeSdkTokenManager")
