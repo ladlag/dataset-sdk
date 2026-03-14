@@ -552,8 +552,9 @@ class KnowledgeServiceTest {
                     "Request body should NOT include name field (not in API docs)");
             assertTrue(body.contains("\"data_source\""),
                     "Request body should include data_source");
-            // Verify custom prefix is used in dataset naming (via service layer)
-            assertEquals("kb_alice001", properties.getUserDatasetPrefix() + "alice001");
+            // Verify custom prefix is reflected in dataset response name
+            assertEquals("kb_alice001", response.getName(),
+                    "Dataset name should use custom prefix 'kb_'");
         } finally {
             // Restore default prefix
             properties.setUserDatasetPrefix("user_");
