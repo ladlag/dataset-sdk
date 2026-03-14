@@ -58,6 +58,12 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+        <!-- Jackson JSR310 (Java 8 date/time support for LocalDateTime etc.) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+
         <!-- SLF4J -->
         <dependency>
             <groupId>org.slf4j</groupId>

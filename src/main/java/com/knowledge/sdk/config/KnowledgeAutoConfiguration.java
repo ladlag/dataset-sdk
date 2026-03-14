@@ -22,6 +22,19 @@ import java.util.concurrent.TimeUnit;
 @Import(KnowledgeRedisAutoConfiguration.class)
 public class KnowledgeAutoConfiguration {
 
+    /**
+     * Internal ObjectMapper for SDK use only. NOT exposed as a Spring bean to avoid
+     * blocking Spring Boot's auto-configured ObjectMapper (which provides JSR310
+     * LocalDateTime support, spring.jackson.* properties, etc. to the consumer app).
+     */
+    private final ObjectMapper sdkObjectMapper = createSdkObjectMapper();
+
+    private static ObjectMapper createSdkObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.findAndRegisterModules();
+        return mapper;
+    }
+
     @Bean("knowledgeSdkOkHttpClient")
     @ConditionalOnMissingBean(name = "knowledgeSdkOkHttpClient")
     public OkHttpClient knowledgeSdkOkHttpClient(KnowledgeProperties properties) {
@@ -41,20 +54,11 @@ public class KnowledgeAutoConfiguration {
                 .build();
     }
 
-    @Bean("knowledgeSdkObjectMapper")
-    @ConditionalOnMissingBean(name = "knowledgeSdkObjectMapper")
-    public ObjectMapper knowledgeSdkObjectMapper() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.findAndRegisterModules();
-        return mapper;
-    }
-
     @Bean("knowledgeSdkTokenManager")
     @ConditionalOnMissingBean(name = "knowledgeSdkTokenManager")
     public TokenManager knowledgeSdkTokenManager(KnowledgeProperties properties,
-                                                  OkHttpClient knowledgeSdkOkHttpClient,
-                                                  ObjectMapper knowledgeSdkObjectMapper) {
-        return new TokenManager(properties, knowledgeSdkOkHttpClient, knowledgeSdkObjectMapper);
+                                                  OkHttpClient knowledgeSdkOkHttpClient) {
+        return new TokenManager(properties, knowledgeSdkOkHttpClient, sdkObjectMapper);
     }
 
     @Bean("knowledgeSdkInitFileIdCache")
@@ -67,10 +71,9 @@ public class KnowledgeAutoConfiguration {
     @ConditionalOnMissingBean(name = "knowledgeSdkHttpClient")
     public KnowledgeHttpClient knowledgeSdkHttpClient(KnowledgeProperties properties,
                                                        TokenManager knowledgeSdkTokenManager,
-                                                       ObjectMapper knowledgeSdkObjectMapper,
                                                        OkHttpClient knowledgeSdkOkHttpClient,
                                                        InitFileIdCache knowledgeSdkInitFileIdCache) {
-        return new KnowledgeHttpClient(properties, knowledgeSdkTokenManager, knowledgeSdkObjectMapper,
+        return new KnowledgeHttpClient(properties, knowledgeSdkTokenManager, sdkObjectMapper,
                 knowledgeSdkOkHttpClient, knowledgeSdkInitFileIdCache);
     }
 
