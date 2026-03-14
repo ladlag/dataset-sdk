@@ -83,7 +83,7 @@ public class KnowledgeHttpClient {
 
         List<String> fileIds = new ArrayList<>();
         fileIds.add(initFileId);
-        String body = buildInitDatasetBody(name, fileIds);
+        String body = buildInitDatasetBody(fileIds);
 
         String responseBody = executeWithRetry("POST", url, body, username, email);
         try {
@@ -206,7 +206,7 @@ public class KnowledgeHttpClient {
 
     public String initDatasetWithDocuments(String datasetName, List<String> fileIds, String username, String email) {
         String url = properties.getBaseUrl() + properties.getDatasetInitPath();
-        String body = buildInitDatasetBody(datasetName, fileIds);
+        String body = buildInitDatasetBody(fileIds);
 
         String responseBody = executeWithRetry("POST", url, body, username, email);
         try {
@@ -412,9 +412,8 @@ public class KnowledgeHttpClient {
         return "{" + buildDataSourceAndConfig(fileIds) + "}";
     }
 
-    private String buildInitDatasetBody(String datasetName, List<String> fileIds) {
+    private String buildInitDatasetBody(List<String> fileIds) {
         return "{"
-                + "\"name\":\"" + escapeJson(datasetName) + "\","
                 + buildDataSourceAndConfig(fileIds)
                 + "}";
     }

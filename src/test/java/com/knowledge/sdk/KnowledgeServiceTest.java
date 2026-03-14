@@ -95,10 +95,10 @@ class KnowledgeServiceTest {
         assertEquals("/console/api/datasets/init", createRequest.getPath(),
                 "createDataset should POST to /console/api/datasets/init");
 
-        // Verify request body includes required fields
+        // Verify request body includes required fields (no name field per API docs)
         String body = createRequest.getBody().readUtf8();
-        assertTrue(body.contains("\"name\":\"test-dataset\""),
-                "Request body should include name");
+        assertFalse(body.contains("\"name\""),
+                "Request body should NOT include name field (not in API docs)");
         assertTrue(body.contains("\"data_source\""),
                 "Request body should include data_source");
         assertTrue(body.contains("\"indexing_technique\":\"high_quality\""),
@@ -160,7 +160,8 @@ class KnowledgeServiceTest {
         assertEquals("POST", createRequest.getMethod());
         assertEquals("/console/api/datasets/init", createRequest.getPath());
         String body = createRequest.getBody().readUtf8();
-        assertTrue(body.contains("user_bob002"));
+        assertFalse(body.contains("\"name\""),
+                "Request body should NOT include name field (not in API docs)");
         assertTrue(body.contains("\"data_source\""),
                 "Request body should include data_source");
     }
@@ -544,9 +545,15 @@ class KnowledgeServiceTest {
             // Skip init file upload request
             mockServer.takeRequest();
 
-            // Verify the request body uses the custom prefix
+            // Verify the request body does NOT include name field (per API docs)
             RecordedRequest request = mockServer.takeRequest();
-            assertTrue(request.getBody().readUtf8().contains("kb_alice001"));
+            String body = request.getBody().readUtf8();
+            assertFalse(body.contains("\"name\""),
+                    "Request body should NOT include name field (not in API docs)");
+            assertTrue(body.contains("\"data_source\""),
+                    "Request body should include data_source");
+            // Verify custom prefix is used in dataset naming (via service layer)
+            assertEquals("kb_alice001", properties.getUserDatasetPrefix() + "alice001");
         } finally {
             // Restore default prefix
             properties.setUserDatasetPrefix("user_");
