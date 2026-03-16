@@ -78,7 +78,8 @@ public class KnowledgeHttpClient {
     // ===== Per-user methods (using user-specific token) =====
 
     public DatasetResponse createDataset(String name, String username, String email) {
-        String initFileId = getOrUploadInitFile(username, email);
+        String initFileName = name + ".txt";
+        String initFileId = uploadInitFile(initFileName, username, email);
         String url = properties.getBaseUrl() + properties.getDatasetInitPath();
 
         List<String> fileIds = new ArrayList<>();
@@ -120,7 +121,7 @@ public class KnowledgeHttpClient {
         }
 
         log.info("Uploading init file for dataset creation (key={})", cacheKey);
-        String fileId = uploadInitFile(username, email);
+        String fileId = uploadInitFile(null, username, email);
         initFileIdCache.put(cacheKey, fileId);
         return fileId;
     }
@@ -131,13 +132,14 @@ public class KnowledgeHttpClient {
      * Uses the same token as the dataset creation to ensure the file_id
      * belongs to the requesting user's account.
      *
+     * @param customFileName the file name to use for the init file
      * @param username the username for per-user token (null for default)
      * @param email the email for per-user token (null for default)
      * @return the uploaded file ID
      */
-    private String uploadInitFile(String username, String email) {
+    private String uploadInitFile(String customFileName, String username, String email) {
         String url = properties.getBaseUrl() + properties.getFileUploadPath() + "?source=datasets";
-        String fileName = properties.getInitFileName();
+        String fileName = customFileName != null ? customFileName : properties.getInitFileName();
         byte[] content = properties.getInitFileContent().getBytes(StandardCharsets.UTF_8);
 
         RequestBody fileBody = RequestBody.create(content, MediaType.parse("text/plain"));

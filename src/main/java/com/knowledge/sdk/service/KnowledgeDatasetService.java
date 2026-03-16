@@ -10,7 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class KnowledgeDatasetService {
@@ -157,7 +159,8 @@ public class KnowledgeDatasetService {
 
     /**
      * Create a user's personal knowledge base using the default token.
-     * Dataset name follows the pattern: user_{userId}
+     * Dataset name follows the pattern: user_{userId}_{yyyyMMddHHmmss}
+     * Each call generates a unique name with a timestamp suffix.
      *
      * @param userId user identifier
      * @return created dataset info
@@ -170,7 +173,8 @@ public class KnowledgeDatasetService {
      * Create a user's personal knowledge base using a user-specific token.
      * Logs in as the specified user via SSO to get their token,
      * so the dataset is created under that user's account (truly private).
-     * Dataset name follows the pattern: user_{userId}
+     * Dataset name follows the pattern: user_{userId}_{yyyyMMddHHmmss}
+     * Each call generates a unique name with a timestamp suffix.
      *
      * @param userId   user identifier
      * @param username the user's username for SSO login
@@ -182,7 +186,8 @@ public class KnowledgeDatasetService {
             log.warn("createUserDataset called with username={}, email={} — "
                     + "both must be non-null for per-user token, will use default token", username, email);
         }
-        String datasetName = properties.getUserDatasetPrefix() + userId;
+        String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+        String datasetName = properties.getUserDatasetPrefix() + userId + "_" + timestamp;
         return createDataset(datasetName, username, email);
     }
 

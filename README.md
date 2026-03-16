@@ -185,13 +185,14 @@ public DatasetResponse createPublicDataset() {
 }
 ```
 
-**创建个人知识库（默认 token）**：名称自动按 `user_{userId}` 格式生成，知识库在默认用户账户下管理。
+**创建个人知识库（默认 token）**：名称自动按 `user_{userId}_{yyyyMMddHHmmss}` 格式生成（包含时间戳，支持同一用户创建多个知识库），知识库在默认用户账户下管理。
 
 ```java
 /**
  * 创建个人知识库（默认 token）
  *
- * 知识库名称：user_{userId}，例如 user_alice001
+ * 知识库名称：user_{userId}_{时间戳}，例如 user_alice001_20260314120000
+ * 同一用户可多次调用创建多个知识库，每次名称唯一
  * 知识库归属于配置文件中默认用户的账户
  */
 @PostMapping("/users/{userId}/datasets")
@@ -218,7 +219,7 @@ public DatasetResponse createPrivateUserDataset(@PathVariable String userId,
                                                  @RequestParam String username,
                                                  @RequestParam String email) {
     // SDK 以 alice 的身份登录，获取 alice 的 token
-    // 用 alice 的 token 创建知识库 "user_alice001"，该知识库归属于 alice
+    // 用 alice 的 token 创建知识库 "user_alice001_{时间戳}"，该知识库归属于 alice
     DatasetResponse dataset = knowledgeDatasetService.createUserDataset(
             userId, username, email);
     System.out.println("私有知识库已创建: " + dataset.getName() + ", 归属用户: " + username);
@@ -296,7 +297,8 @@ public List<String> uploadProductDocs(@RequestParam("files") List<MultipartFile>
 
 > **知识库命名规则**：
 > - 公共知识库：名称固定为 `public_dataset`（可通过 `knowledge.public-dataset-name` 修改）
-> - 个人知识库：名称为 `user_{userId}`，如 `user_alice001`（前缀可通过 `knowledge.user-dataset-prefix` 修改）
+> - 个人知识库（创建时）：名称为 `user_{userId}_{yyyyMMddHHmmss}`，如 `user_alice001_20260314120000`（前缀可通过 `knowledge.user-dataset-prefix` 修改），每次创建生成唯一名称
+> - 个人知识库（上传时）：名称为 `user_{userId}`，如 `user_alice001`，多次上传复用同一知识库
 >
 > **知识库归属说明**：
 > - **方式一（默认 token）**：使用配置文件中 `username/email` 的 token 创建知识库。知识库在知识库系统中归属于该默认用户，`user_{userId}` 只是命名约定用于区分不同用户的数据。所有个人知识库实际上都在同一个默认账户下管理。
@@ -335,7 +337,7 @@ public List<String> uploadToUserDataset(@PathVariable String userId,
                                          @RequestParam String email,
                                          @RequestParam("files") List<MultipartFile> files) {
     // SDK 以 alice 的身份登录，获取 alice 的 token
-    // 用 alice 的 token 创建知识库 "user_alice001"，该知识库归属于 alice
+    // 用 alice 的 token 创建知识库 "user_alice001_{时间戳}"，该知识库归属于 alice
     List<String> results = knowledgeDatasetService.uploadToUserDataset(
             userId, username, email, files);
     System.out.println("已上传到用户 " + userId + " 的个人知识库（使用用户专属 token）");
