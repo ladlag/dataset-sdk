@@ -1,0 +1,179 @@
+# ====================================================================
+# Knowledge SDK 示例配置文件
+# ====================================================================
+# 使用方式：
+#   1. 将此文件复制到你的 SpringBoot 项目 src/main/resources/ 目录下
+#   2. 重命名为 application.yml（或合并到已有的 application.yml 中）
+#   3. 修改下面标注 [必填] 的配置项
+# ====================================================================
+
+knowledge:
+  # ------------------------------------------------------------------
+  # [必填] 基础配置
+  # ------------------------------------------------------------------
+
+  # 知识库系统的地址（含协议和端口）
+  base-url: https://your-knowledge-system-host:port
+
+  # 系统级 Token，用于 SSO 登录请求的 Authorization 头
+  # SDK 调用 SSO 接口时会发送：Authorization: Bearer {system-token}
+  # 该 token 由知识库系统管理员提供，用于验证 SDK 的调用权限
+  system-token: your-system-token
+
+  # SSO 登录的默认用户名
+  # SDK 使用该用户名构建 HTTP_USER_INFO JSON 进行 SSO 登录
+  username: admin
+
+  # SSO 登录的默认邮箱
+  # SDK 使用该邮箱构建 HTTP_USER_INFO JSON 进行 SSO 登录
+  email: admin@example.com
+
+  # ------------------------------------------------------------------
+  # [可选] 知识库命名配置
+  # ------------------------------------------------------------------
+
+  # 公共知识库名称（调用 uploadToPublicDataset 时使用此名称）
+  public-dataset-name: public_dataset
+
+  # 个人知识库名称前缀（调用 createUserDataset / uploadToUserDataset 时，名称 = 前缀 + userId）
+  # 例如 userId="alice001" → 知识库名称为 "user_alice001"
+  # 可修改为其他前缀，如 "kb_"、"personal_" 等
+  user-dataset-prefix: user_
+
+  # ------------------------------------------------------------------
+  # [可选] Token 与安全配置
+  # ------------------------------------------------------------------
+
+  # Token 有效期（秒），SDK 会在过期前自动刷新
+  token-ttl-seconds: 3600
+
+  # Token 提前刷新的缓冲时间（秒），即在过期前 300 秒就开始刷新
+  token-expiry-buffer-seconds: 300
+
+  # RSA 公钥 PEM 文件在 classpath 中的路径
+  # 用于对 SSO 登录的 HTTP_USER_INFO 进行 RSA 加密
+  rsa-public-key-path: rsa_public_key.pem
+
+  # ------------------------------------------------------------------
+  # [可选] API 路径配置
+  # ------------------------------------------------------------------
+  # 以下路径拼接在 base-url 后面，支持 {datasetId}、{documentId} 占位符
+
+  # SSO 登录接口路径
+  sso-login-path: /tenant/api/app/account/sso_login
+
+  # 创建知识库接口路径（同时也用于创建知识库并上传文档）
+  # POST 请求，需要 name、data_source、indexing_technique 等字段
+  # SDK 创建知识库时会自动上传一个占位初始化文件作为 data_source
+  dataset-init-path: /console/api/datasets/init
+
+  # 文件上传接口路径（SDK 会自动追加 ?source=datasets）
+  file-upload-path: /console/api/files/upload
+
+  # 知识库列表接口路径
+  dataset-list-path: /console/api/datasets
+
+  # 单个知识库操作路径（{datasetId} 会被替换为实际 ID）
+  dataset-by-id-path: /console/api/datasets/{datasetId}
+
+  # 知识库文档列表操作路径
+  dataset-documents-path: /console/api/datasets/{datasetId}/documents
+
+  # 单个文档操作路径
+  dataset-document-by-id-path: /console/api/datasets/{datasetId}/documents/{documentId}
+
+  # ------------------------------------------------------------------
+  # [可选] HTTP 客户端配置
+  # ------------------------------------------------------------------
+
+  connect-timeout-seconds: 30
+  read-timeout-seconds: 60
+  write-timeout-seconds: 60
+  max-file-size: 20971520            # 单个文件最大 20MB
+  max-files-per-batch: 10            # 每批最多上传文件数
+
+  # ------------------------------------------------------------------
+  # [可选] OkHttp 连接池配置
+  # ------------------------------------------------------------------
+
+  max-requests: 64                   # 最大并发请求数
+  max-requests-per-host: 20          # 每个主机最大并发请求数
+  connection-pool-size: 20           # 连接池大小
+  connection-pool-keep-alive-minutes: 5  # 连接保活时间（分钟）
+
+  # ------------------------------------------------------------------
+  # [可选] 文档处理配置
+  # ------------------------------------------------------------------
+
+  indexing-technique: high_quality    # 索引技术
+  doc-form: text_model               # 文档形式
+  doc-language: English              # 文档语言
+  process-rule-mode: custom          # 处理规则模式
+  segment-separator: "\\n\\n"        # 分段分隔符
+  segment-max-tokens: 500            # 每段最大 token 数
+  segment-chunk-overlap: 50          # 分段重叠 token 数
+
+  # ------------------------------------------------------------------
+  # [可选] 检索模型配置
+  # ------------------------------------------------------------------
+
+  search-method: hybrid_search       # 检索方式
+  top-k: 3                           # 检索返回 Top-K
+  score-threshold-enabled: false     # 是否启用分数阈值
+  score-threshold: 0.5               # 分数阈值
+  reranking-enable: true             # 是否启用重排序
+  reranking-mode: reranking_model    # 重排序模式
+  reranking-provider-name: langgenius/tongyi/tongyi  # 重排序模型提供商
+  reranking-model-name: gte-rerank-v2  # 重排序模型名称
+  weight-type: customized            # 权重类型
+  vector-weight: 0.7                 # 向量权重（与 keyword-weight 之和应为 1.0）
+  keyword-weight: 0.3                # 关键词权重（与 vector-weight 之和应为 1.0）
+  embedding-model: text-embedding-v2  # 嵌入模型
+  embedding-model-provider: langgenius/tongyi/tongyi  # 嵌入模型提供商
+
+  # ------------------------------------------------------------------
+  # [可选] 初始化文件配置
+  # ------------------------------------------------------------------
+  # SDK 创建知识库时需要通过 /datasets/init 接口，该接口要求 data_source
+  # 中包含至少一个 file_id。SDK 会自动上传一个小的占位文件来满足此要求。
+  # 该占位文件的 ID 会被缓存（支持内存和 Redis），避免重复上传。
+
+  init-file-name: init.txt                          # 初始化占位文件名
+  init-file-content: Knowledge Base Initialization File  # 初始化占位文件内容
+
+  # ------------------------------------------------------------------
+  # [可选] 缓存配置
+  # ------------------------------------------------------------------
+  # SDK 仅缓存不经常变化的数据（如初始化知识库时的 init 文件 ID），
+  # 不缓存业务数据（如知识库 ID），避免多节点部署时数据不一致。
+  #
+  # 单实例部署（默认）：
+  #   使用内存缓存（ConcurrentHashMap），无需额外配置。
+  #
+  # 多实例部署（推荐使用 Redis）：
+  #   只需添加 spring-boot-starter-data-redis 依赖并配置 Redis 连接，
+  #   SDK 会自动切换为 Redis 缓存，所有实例共享 init 文件 ID 缓存。
+  #
+  #   1. 在 pom.xml 中添加：
+  #      <dependency>
+  #          <groupId>org.springframework.boot</groupId>
+  #          <artifactId>spring-boot-starter-data-redis</artifactId>
+  #      </dependency>
+  #
+  #   2. 在 application.yml 中配置 Redis 连接：
+  #      spring:
+  #        redis:
+  #          host: localhost
+  #          port: 6379
+  #          password: your-redis-password   # 如有密码
+  #
+  # Redis 缓存的 TTL（小时），默认 24 小时
+  cache-ttl-hours: 24
+
+# ------------------------------------------------------------------
+# [可选] SDK 日志配置
+# ------------------------------------------------------------------
+# 设置 SDK 包的日志级别为 DEBUG，可查看 token 获取、刷新等详细信息
+logging:
+  level:
+    com.knowledge.sdk: DEBUG
