@@ -10,14 +10,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 public class KnowledgeDatasetService {
 
     private static final Logger log = LoggerFactory.getLogger(KnowledgeDatasetService.class);
+    private static final DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final KnowledgeHttpClient httpClient;
     private final KnowledgeProperties properties;
@@ -186,7 +187,7 @@ public class KnowledgeDatasetService {
             log.warn("createUserDataset called with username={}, email={} — "
                     + "both must be non-null for per-user token, will use default token", username, email);
         }
-        String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+        String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMAT);
         String datasetName = properties.getUserDatasetPrefix() + userId + "_" + timestamp;
         return createDataset(datasetName, username, email);
     }

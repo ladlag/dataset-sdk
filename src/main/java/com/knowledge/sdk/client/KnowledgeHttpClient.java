@@ -24,6 +24,7 @@ public class KnowledgeHttpClient {
 
     private static final Logger log = LoggerFactory.getLogger(KnowledgeHttpClient.class);
     private static final MediaType JSON_MEDIA_TYPE = MediaType.parse("application/json; charset=utf-8");
+    private static final String INIT_FILE_EXTENSION = ".txt";
 
     private final KnowledgeProperties properties;
     private final OkHttpClient httpClient;
@@ -78,7 +79,7 @@ public class KnowledgeHttpClient {
     // ===== Per-user methods (using user-specific token) =====
 
     public DatasetResponse createDataset(String name, String username, String email) {
-        String initFileName = name + ".txt";
+        String initFileName = name + INIT_FILE_EXTENSION;
         String initFileId = uploadInitFile(initFileName, username, email);
         String url = properties.getBaseUrl() + properties.getDatasetInitPath();
 
